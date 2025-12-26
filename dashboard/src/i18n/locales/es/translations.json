@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "dashboards": {
+      "dashboards": "Paneles",
+      "home": "Inicio"
+    },
+    "templates": {
+      "templates": "Plantillas",
+      "browse": "Explorar Plantillas",
+      "maker": "Creador de Plantillas"
+    },
+    "admin": {
+      "admin": "Administración",
+      "settings": "Configuración del Sitio",
+      "users": "Gestión de Usuarios",
+      "tools": "Gestión de Herramientas",
+      "userPoints": "Puntos de Usuario",
+      "userAnalytics": "Análisis de Usuarios",
+      "analytics": "Panel de Análisis",
+      "activity": "Registro de Actividad",
+      "phishing": {
+        "templates": "Gestión de Plantillas",
+        "domains": "Gestión de Dominios"
+      },
+      "template": {
+        "maker": "Creador de Plantillas",
+        "approval": "Aprobación de Plantillas"
+      }
+    },
+    "phishing": {
+      "phishing": "Phishing",
+      "dashboard": "Panel en Tiempo Real",
+      "create": "Crear Sitio Web",
+      "manage": "Gestión de Sitios Web",
+      "telegram": "Bot de Telegram"
+    },
+    "user": {
+      "analytics": "Mis Análisis"
+    },
+        "settings": {
+          "settings": "Configuración",
+          "general": "General",
+          "appearance": "Apariencia"
+        },
+        "money": {
+          "money": "Dinero",
+          "billing": "Facturación",
+          "topup": "Recargar",
+          "transactions": "Transacciones"
+        }
+  }
+}

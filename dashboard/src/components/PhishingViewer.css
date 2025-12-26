@@ -1,0 +1,350 @@
+/* Phishing Viewer Styles */
+.phishing-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.loader-container {
+  text-align: center;
+  color: white;
+  z-index: 2;
+  position: relative;
+}
+
+.loader-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+.loader-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.default-logo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 8px;
+  position: relative;
+}
+
+.logo-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background: #667eea;
+  border-radius: 50%;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.loader-content h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out 0.3s forwards;
+}
+
+.progress-bar {
+  width: 300px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 0 auto 15px;
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out 0.6s forwards;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fff, #f0f8ff);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.loading-text {
+  font-size: 16px;
+  opacity: 0.8;
+  margin: 0;
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out 0.9s forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.loader-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.floating-particles {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  animation: float linear infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(100vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-10vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Main phishing container */
+.phishing-container {
+  min-height: 100vh;
+  position: relative;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.phishing-container.transitioning {
+  transform: scale(0.95);
+  filter: blur(2px);
+  opacity: 0.7;
+}
+
+.phishing-content {
+  min-height: 100vh;
+  position: relative;
+  animation: slideInFromBottom 0.8s ease-out;
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.template-content {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Transition overlay */
+.transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: overlayFadeIn 0.5s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.transition-content {
+  text-align: center;
+  color: white;
+}
+
+.transition-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.transition-content p {
+  font-size: 18px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* Floating login button */
+.floating-login-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: floatingBtnEntrance 0.8s ease-out 1.2s both;
+}
+
+@keyframes floatingBtnEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(100px) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.floating-login-btn:hover {
+  transform: translateY(-5px) scale(1.1);
+  box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+}
+
+.floating-login-btn:active {
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .loader-container h2 {
+    font-size: 24px;
+  }
+  
+  .progress-bar {
+    width: 250px;
+  }
+  
+  .floating-login-btn {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .transition-content p {
+    font-size: 16px;
+    padding: 0 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .loader-logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 20px;
+  }
+  
+  .loader-container h2 {
+    font-size: 20px;
+  }
+  
+  .progress-bar {
+    width: 200px;
+  }
+  
+  .loading-text {
+    font-size: 14px;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}

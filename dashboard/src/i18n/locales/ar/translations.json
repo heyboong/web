@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "dashboards": {
+      "dashboards": "لوحات التحكم",
+      "home": "الرئيسية"
+    },
+    "templates": {
+      "templates": "القوالب",
+      "browse": "تصفح القوالب",
+      "maker": "صانع القوالب"
+    },
+    "phishing": {
+      "phishing": "التصيد الاحتيالي",
+      "dashboard": "لوحة التحكم المباشرة",
+      "create": "إنشاء موقع ويب",
+      "manage": "إدارة المواقع",
+      "telegram": "بوت تيليجرام"
+    },
+    "admin": {
+      "admin": "الإدارة",
+      "settings": "إعدادات الموقع",
+      "users": "إدارة المستخدمين",
+      "tools": "إدارة الأدوات",
+      "userPoints": "نقاط المستخدمين",
+      "userAnalytics": "تحليلات المستخدمين",
+      "analytics": "لوحة التحليلات",
+      "activity": "سجل النشاط",
+      "phishing": {
+        "templates": "إدارة القوالب",
+        "domains": "إدارة النطاقات"
+      },
+      "template": {
+        "maker": "صانع القوالب",
+        "approval": "موافقة القوالب"
+      }
+    },
+    "user": {
+      "analytics": "تحليلاتي"
+    },
+        "settings": {
+          "settings": "الإعدادات",
+          "general": "عام",
+          "appearance": "المظهر"
+        },
+        "money": {
+          "money": "المال",
+          "billing": "الفوترة",
+          "topup": "شحن الرصيد",
+          "transactions": "المعاملات"
+        }
+  }
+}

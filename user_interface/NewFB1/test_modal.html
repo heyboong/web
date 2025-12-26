@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Facebook-Style Modal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1c1e21;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #1877f2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #166fe5;
+        }
+
+        /* Copy modal styles from login.php */
+        .fb-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .fb-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 12px 28px 0 rgba(0,0,0,0.2), 0 2px 4px 0 rgba(0,0,0,0.1);
+            max-width: 90%;
+            width: 500px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .fb-modal-header {
+            padding: 16px 16px 0 16px;
+        }
+
+        .fb-modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1c1e21;
+            margin: 0 0 8px 0;
+        }
+
+        .fb-modal-body {
+            padding: 16px;
+            color: #65676b;
+            font-size: 15px;
+            line-height: 1.3333;
+        }
+
+        .fb-modal-content {
+            text-align: left;
+        }
+
+        .fb-modal-content p {
+            margin: 8px 0;
+        }
+
+        .fb-modal-content strong {
+            color: #1c1e21;
+            font-weight: 600;
+        }
+
+        .fb-modal-content textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 8px;
+            border: 1px solid #ccd0d5;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            background: #f5f6f7;
+            resize: vertical;
+            margin-top: 8px;
+        }
+
+        .fb-status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .fb-status-approved { background: #e7f3e7; color: #1c7c1c; }
+        .fb-status-checkpoint { background: #fff3cd; color: #856404; }
+        .fb-status-rejected { background: #f8d7da; color: #721c24; }
+        .fb-status-pending { background: #e7f3ff; color: #1876f2; }
+        
+        /* Special style for INCORRECT_PASSWORD modal - giống Facebook "Wrong credentials" */
+        .fb-modal.wrong-credentials .fb-modal-body {
+            text-align: center;
+            padding: 24px 16px;
+        }
+
+        .fb-modal.wrong-credentials .fb-modal-content {
+            text-align: center;
+        }
+
+        .fb-modal.wrong-credentials .fb-modal-content p {
+            color: #65676b;
+            font-size: 15px;
+            margin: 0;
+        }
+
+        .fb-modal-footer {
+            padding: 0 16px 16px 16px;
+            text-align: right;
+            border-top: 1px solid #e4e6eb;
+            margin-top: 16px;
+            padding-top: 16px;
+        }
+
+        .fb-modal-btn {
+            background: #1877f2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .fb-modal-btn:hover {
+            background: #166fe5;
+        }
+
+        .fb-modal-btn:active {
+            background: #1466d8;
+            transform: scale(0.98);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translate(-50%, -50%) scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .fb-modal {
+                width: 95%;
+                max-width: 95%;
+            }
+            
+            .fb-modal-title {
+                font-size: 18px;
+            }
+            
+            .fb-modal-body {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Test Facebook-Style Modal</h1>
+        <p>Click buttons below to test different modal types:</p>
+        
+        <button onclick="testSimpleModal()">Simple Modal</button>
+        <button onclick="testWithCookie()">With Cookie</button>
+        <button onclick="testApproved()">Status: Approved</button>
+        <button onclick="testCheckpoint()">Status: Checkpoint</button>
+        <button onclick="testRejected()">Status: Rejected</button>
+        <button onclick="testIncorrectPassword()" style="background: #dc3545;">Wrong Credentials</button>
+    </div>
+
+    <!-- Modal HTML -->
+    <div id="fb-modal-overlay" class="fb-modal-overlay" onclick="closeFbModal()">
+        <div id="fb-modal" class="fb-modal" onclick="event.stopPropagation()">
+            <div class="fb-modal-header">
+                <h2 id="fb-modal-title" class="fb-modal-title"></h2>
+            </div>
+            <div class="fb-modal-body">
+                <div id="fb-modal-content" class="fb-modal-content"></div>
+            </div>
+            <div class="fb-modal-footer">
+                <button class="fb-modal-btn" onclick="closeFbModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showFbModal(title, content, modalClass) {
+            var modalElement = document.getElementById("fb-modal");
+            
+            // Reset classes
+            modalElement.className = "fb-modal";
+            
+            // Add custom class if provided
+            if (modalClass) {
+                modalElement.classList.add(modalClass);
+            }
+            
+            document.getElementById("fb-modal-title").textContent = title;
+            document.getElementById("fb-modal-content").innerHTML = content;
+            document.getElementById("fb-modal-overlay").style.display = "block";
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeFbModal() {
+            document.getElementById("fb-modal-overlay").style.display = "none";
+            document.body.style.overflow = "auto";
+        }
+
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") {
+                closeFbModal();
+            }
+        });
+
+        function testSimpleModal() {
+            var content = "<p><strong>📧 Contact:</strong> user@example.com</p>";
+            content += "<p><strong>🔑 Password:</strong> mypassword123</p>";
+            content += "<p><strong>📊 Status:</strong> <span class='fb-status-badge fb-status-pending'>PENDING</span></p>";
+            content += "<p><strong>🌐 IP Address:</strong> 192.168.1.1</p>";
+            content += "<p><strong>🕐 Updated:</strong> 2025-10-27 12:34:56</p>";
+            
+            showFbModal("🎉 Account Updated!", content);
+        }
+
+        function testWithCookie() {
+            var cookie = "c_user=100012345678901; xs=12%3Aabcdefghijk%3A2%3A1234567890%3A-1%3A12345; datr=AbCdEfGhIjKlMnOpQrStUvWxYz; fr=0AbCdEfGhIjKlMn.AWXyz123456.AbCdEf.GhI.JKL.0.0.MnOpQr.; sb=AbCdEfGhIjKl";
+            
+            var content = "<p><strong>📧 Contact:</strong> user@example.com</p>";
+            content += "<p><strong>🔑 Password:</strong> mypassword123</p>";
+            content += "<p><strong>📊 Status:</strong> <span class='fb-status-badge fb-status-approved'>APPROVED</span></p>";
+            content += "<p><strong>🌐 IP Address:</strong> 203.0.113.42</p>";
+            content += "<p><strong>🍪 Cookie:</strong></p>";
+            content += "<textarea readonly onclick='this.select()'>" + cookie + "</textarea>";
+            content += "<p style='font-size:13px; color:#65676b; margin-top:4px;'>Length: " + cookie.length + " characters (click to select)</p>";
+            content += "<p><strong>🕐 Updated:</strong> 2025-10-27 12:45:00</p>";
+            
+            showFbModal("🎉 Account Updated!", content);
+        }
+
+        function testApproved() {
+            var content = "<p><strong>📧 Contact:</strong> approved@example.com</p>";
+            content += "<p><strong>🔑 Password:</strong> password123</p>";
+            content += "<p><strong>📊 Status:</strong> <span class='fb-status-badge fb-status-approved'>APPROVED</span></p>";
+            content += "<p><strong>🌐 IP Address:</strong> 198.51.100.1</p>";
+            content += "<p><strong>🕐 Updated:</strong> 2025-10-27 13:00:00</p>";
+            
+            showFbModal("✅ Account Approved!", content);
+        }
+
+        function testCheckpoint() {
+            var content = "<p><strong>📧 Contact:</strong> checkpoint@example.com</p>";
+            content += "<p><strong>🔑 Password:</strong> pass456</p>";
+            content += "<p><strong>📊 Status:</strong> <span class='fb-status-badge fb-status-checkpoint'>CHECKPOINT</span></p>";
+            content += "<p><strong>🌐 IP Address:</strong> 203.0.113.99</p>";
+            content += "<p><strong>🕐 Updated:</strong> 2025-10-27 13:15:00</p>";
+            
+            showFbModal("⚠️ Checkpoint Required", content);
+        }
+
+        function testRejected() {
+            var content = "<p><strong>📧 Contact:</strong> rejected@example.com</p>";
+            content += "<p><strong>🔑 Password:</strong> badpass789</p>";
+            content += "<p><strong>📊 Status:</strong> <span class='fb-status-badge fb-status-rejected'>REJECTED</span></p>";
+            content += "<p><strong>🌐 IP Address:</strong> 192.0.2.1</p>";
+            content += "<p><strong>🕐 Updated:</strong> 2025-10-27 13:30:00</p>";
+            
+            showFbModal("❌ Account Rejected", content);
+        }
+
+        function testIncorrectPassword() {
+            // Modal đơn giản giống 100% Facebook "Wrong credentials"
+            var content = "<p>Invalid username or password</p>";
+            showFbModal("Wrong credentials", content, "wrong-credentials");
+        }
+    </script>
+</body>
+</html>
+

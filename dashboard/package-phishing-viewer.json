@@ -1,0 +1,21 @@
+{
+  "name": "phishing-viewer",
+  "version": "1.0.0",
+  "description": "Separate phishing page viewer server",
+  "main": "phishing-viewer.js",
+  "type": "module",
+  "scripts": {
+    "start": "node phishing-viewer.js",
+    "dev": "nodemon phishing-viewer.js",
+    "start-with-script": "node start-phishing-viewer.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

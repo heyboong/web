@@ -1,0 +1,51 @@
+{
+  "nav": {
+    "dashboards": {
+      "dashboards": "仪表板",
+      "home": "首页"
+    },
+    "templates": {
+      "templates": "模板",
+      "browse": "浏览模板",
+      "maker": "模板制作器"
+    },
+    "admin": {
+      "admin": "管理",
+      "settings": "网站设置",
+      "users": "用户管理",
+      "tools": "工具管理",
+      "userPoints": "用户积分",
+      "userAnalytics": "用户分析",
+      "analytics": "分析仪表板",
+      "activity": "活动日志",
+      "phishing": {
+        "templates": "模板管理",
+        "domains": "域名管理"
+      },
+      "template": {
+        "maker": "模板制作器",
+        "approval": "模板审批"
+      }
+    },
+    "phishing": {
+      "phishing": "钓鱼",
+      "dashboard": "实时仪表板",
+      "create": "创建网站",
+      "manage": "网站管理",
+      "telegram": "Telegram机器人"
+    },
+    "user": {
+      "analytics": "我的分析"
+    },
+        "settings": {
+          "settings": "设置",
+          "general": "常规",
+          "appearance": "外观"
+        },
+        "money": {
+          "money": "资金",
+          "billing": "账单",
+          "transactions": "交易"
+        }
+  }
+}

