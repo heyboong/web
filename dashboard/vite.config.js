@@ -45,12 +45,12 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:2324',
+        target: process.env.VITE_API_URL || 'http://localhost:2324',
         changeOrigin: true,
         secure: false
       },
       '/uploads': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_API_URL || 'http://localhost:2324',
         changeOrigin: true,
         secure: false
       }

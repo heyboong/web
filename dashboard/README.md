@@ -1,4 +1,5 @@
 # Dashboard Tools System
+[![Netlify Status](https://api.netlify.com/api/v1/badges/d291d4db-9b55-4e46-ac4f-72f0c8e062cd/deploy-status)](https://app.netlify.com/projects/graceful-platypus/deploys)
 
 Hệ thống quản lý và hiển thị các công cụ (tools) trong dashboard với tính năng theo dõi lượt xem.
 

@@ -502,7 +502,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   dotfiles: 'ignore', // Ignore dotfiles for security
   setHeaders: (res, path) => {
     // Set CORS headers for all uploads
-    res.setHeader('Access-Control-Allow-Origin', 'https://via88online.com');
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for images
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
@@ -532,6 +532,26 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
     }
   }
 }));
+
+// Serve static files from React build (only if dist exists)
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  
+  // Handle SPA routing - send index.html for all other routes
+  app.get('*', (req, res) => {
+    // Skip if it's an API request
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ success: false, message: 'API endpoint not found' });
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+} else {
+  console.log('⚠️ Frontend build (dist) not found. Serving API only.');
+  app.get('/', (req, res) => {
+    res.send('Backend API is running. Frontend build not found.');
+  });
+}
 
 // Configure multer for template images gallery
 const templateImageStorage = multer.diskStorage({
