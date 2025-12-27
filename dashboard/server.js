@@ -24,6 +24,9 @@ import {
 import { pusher } from './src/configs/pusher.config.js';
 import templateFieldsRouter from './src/api/routes/templates/fields.js';
 import captureRouter from './src/api/routes/capture.js';
+import adminRouter from './src/api/routes/admin.js';
+import pricingRouter from './src/api/routes/pricing.js';
+import authRouter from './src/api/routes/auth.js';
 
 // Load environment variables
 dotenv.config();
@@ -36,8 +39,48 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = parseInt(process.env.API_PORT) || apiConfig.port || 2324;
 const authenticateUser = authenticateToken;
-const strictRateLimiter = () => (req, res, next) => next();
-const moderateRateLimiter = () => (req, res, next) => next();
+
+// Simple in-memory rate limiter
+const rateLimits = new Map();
+const cleanupRateLimits = setInterval(() => {
+  const now = Date.now();
+  for (const [ip, timestamps] of rateLimits.entries()) {
+    const validTimestamps = timestamps.filter(t => now - t < 15 * 60 * 1000);
+    if (validTimestamps.length === 0) {
+      rateLimits.delete(ip);
+    } else {
+      rateLimits.set(ip, validTimestamps);
+    }
+  }
+}, 5 * 60 * 1000); // Cleanup every 5 minutes
+
+const createRateLimiter = (windowMs, max) => (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  
+  if (!rateLimits.has(ip)) {
+    rateLimits.set(ip, []);
+  }
+  
+  const timestamps = rateLimits.get(ip);
+  const windowStart = now - windowMs;
+  const recentRequests = timestamps.filter(t => t > windowStart);
+  
+  if (recentRequests.length >= max) {
+    console.warn(`⚠️ Rate limit exceeded for IP: ${ip}`);
+    return res.status(429).json({
+      status: 'error',
+      message: 'Too many requests, please try again later.'
+    });
+  }
+  
+  recentRequests.push(now);
+  rateLimits.set(ip, recentRequests);
+  next();
+};
+
+const strictRateLimiter = () => createRateLimiter(60 * 1000, 30); // 30 req/min
+const moderateRateLimiter = () => createRateLimiter(60 * 1000, 300); // 300 req/min
 
 // Middleware
 app.use(helmet({
@@ -501,15 +544,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   index: false, // Don't serve directory listings
   dotfiles: 'ignore', // Ignore dotfiles for security
   setHeaders: (res, path) => {
-const distPath = path.join(__dirname, 'dist');
-if (fs.existsSync(distPath)) {
-  // Chỉ chạy code này nếu thư mục dist tồn tại
-  app.use(express.static(distPath));
-  // ...
-} else {
-  console.log('⚠️ Frontend build (dist) not found. Serving API only.');
-  // ...
-}    // Set CORS headers for all uploads
+    // Set CORS headers for all uploads
     res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for images
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -1211,14 +1246,8 @@ const ensureActivitiesTable = async () => {
 //   runMigrations();
 // });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    message: 'Server is running',
-    timestamp: new Date().toISOString()
-  });
-});
+// Health check endpoint moved to end of file
+// app.get('/api/health'...
 
 // Database test endpoint  
 app.get('/api/db-test', async (req, res) => {
@@ -1346,10 +1375,10 @@ app.post('/api/test-create', async (req, res) => {
 // Authentication middleware - using imported authenticateToken from middleware
 
 // NEW WORKING DASHBOARD API - BYPASSES ALL ISSUES
-app.get('/api/dashboard/analytics-new', authenticateToken, async (req, res) => {
+app.get('/api/dashboard/analytics', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log('🚀 NEW API: Getting analytics for user', userId);
+    console.log('🚀 API: Getting analytics for user', userId);
 
     // Get analytics data
     const analyticsResult = await executeQuery('SELECT * FROM user_analytics WHERE user_id = ?', [userId]);
@@ -1368,7 +1397,7 @@ app.get('/api/dashboard/analytics-new', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('NEW API Error:', error);
+    console.error('API Error:', error);
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
@@ -7276,16 +7305,15 @@ app.get('/api/debug/websites-table', async (req, res) => {
   }
 });
 
-// Start server
-// eslint-disable-next-line no-unused-vars
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🔍 Database test: http://localhost:${PORT}/api/db-test`);
-  console.log(`🌐 Frontend: http://localhost:${PORT}`);
-  console.log(`🌐 API: http://localhost:${PORT}/api`);
-  console.log(`📝 To access from domain, configure reverse proxy or deploy to domain`);
-});
+// Server start moved to end of file to ensure all routes are registered
+// const server = app.listen...
+
+// Register routes
+app.use('/api', authRouter); // Auth routes (login, register) are usually at root /api/login, etc.
+app.use('/api/admin', adminRouter);
+app.use('/api/pricing', pricingRouter);
+app.use('/api/capture', captureRouter);
+app.use('/api/templates', templateFieldsRouter);
 
 // Initialize Pusher
 console.log('🔧 Pusher initialized for real-time updates');
@@ -7475,6 +7503,67 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise);
   console.error('Reason:', reason);
+});
+
+// Enhanced Health Check
+app.get('/api/health', (req, res) => {
+  const healthcheck = {
+    uptime: process.uptime(),
+    message: 'OK',
+    timestamp: Date.now(),
+    memory: process.memoryUsage(),
+    cpu: process.cpuUsage()
+  };
+  try {
+    res.json(healthcheck);
+  } catch (error) {
+    healthcheck.message = error;
+    res.status(503).send();
+  }
+});
+
+// Global Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('🔥 Global Error Handler:', err);
+  
+  // Handle specific error types
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Invalid JSON payload'
+    });
+  }
+  
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({
+      status: 'error',
+      message: 'Request entity too large'
+    });
+  }
+
+  // Default error response
+  res.status(err.status || 500).json({
+    status: 'error',
+    message: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
+// Start Server (Moved from middle of file)
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🌐 Frontend: http://localhost:${PORT}`);
+  console.log(`🌐 API: http://localhost:${PORT}/api`);
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    clearInterval(cleanupRateLimits); // Stop rate limit cleanup
+  });
 });
 
 export default app;

@@ -12,87 +12,38 @@ Hệ thống quản lý và hiển thị các công cụ (tools) trong dashboard
 - ✅ Quản lý tools qua admin panel
 - ✅ Hỗ trợ upload icon cho tools
 
-## Cách thêm Tool mới
+## Quy trình kiểm thử (Test Flow)
 
-### 1. Thêm Tool qua Database (Khuyến nghị)
+Để đảm bảo hệ thống hoạt động chính xác, hãy thực hiện theo quy trình sau:
 
-#### Bước 1: Kết nối Database
-```sql
--- Kết nối vào database của bạn
-USE your_database_name;
-```
+### 1. Khởi động hệ thống
+- Đảm bảo Dashboard Server và Phishing Viewer Server đang chạy.
+  - Dashboard: `npm run server` (Port 2324) và `npm run dev` (Port 5173)
+  - Phishing Viewer: `node start-phishing-viewer.js` (Port 3002)
 
-#### Bước 2: Thêm Tool mới
-```sql
-INSERT INTO tools (
-    name, 
-    description, 
-    category, 
-    status, 
-    price, 
-    points_cost, 
-    icon, 
-    url, 
-    is_featured, 
-    usage_count
-) VALUES (
-    'Tên Tool',                    -- Tên tool (bắt buộc)
-    'Mô tả chi tiết về tool',      -- Mô tả tool
-    'seo',                         -- Category: seo, development, design, analytics, productivity, other
-    'active',                      -- Status: active, inactive, maintenance
-    9.99,                          -- Giá tiền (USD)
-    100,                           -- Chi phí points
-    '🔧',                          -- Icon (emoji hoặc đường dẫn file)
-    '/tools/your-tool-url',        -- URL của tool
-    FALSE,                         -- Có phải tool nổi bật không
-    0                              -- Lượt sử dụng ban đầu
-);
-```
+### 2. Tạo Template mới
+1. Đăng nhập vào Dashboard Admin: [http://localhost:5173](http://localhost:5173)
+2. Truy cập **Templates** -> **Create Template**.
+3. Điền thông tin template (Tên, HTML, CSS).
+4. Lưu template.
 
-#### Ví dụ thêm Tool cụ thể:
-```sql
-INSERT INTO tools (
-    name, 
-    description, 
-    category, 
-    status, 
-    price, 
-    points_cost, 
-    icon, 
-    url, 
-    is_featured, 
-    usage_count
-) VALUES (
-    'SEO Keyword Analyzer', 
-    'Phân tích từ khóa SEO và đưa ra gợi ý tối ưu', 
-    'seo', 
-    'active', 
-    15.99, 
-    150, 
-    '🔍', 
-    '/tools/seo-keyword-analyzer', 
-    TRUE, 
-    0
-);
-```
+### 3. Tạo Website Phishing
+1. Truy cập **Phishing** -> **Create Website**.
+2. Chọn Template vừa tạo.
+3. Điền thông tin website (Tiêu đề, Mô tả, Slug).
+4. Lưu website.
 
-### 2. Thêm Tool qua Admin Panel
+### 4. Kiểm tra trang Phishing
+1. Truy cập trang Phishing Viewer: `http://localhost:3002/{slug}` (Thay `{slug}` bằng slug bạn vừa tạo).
+2. Kiểm tra giao diện xem có hiển thị đúng template không.
+3. Nhập thông tin đăng nhập giả (Username/Password) và submit.
 
-1. Đăng nhập vào admin panel
-2. Truy cập **Tools Management**
-3. Click **Add New Tool**
-4. Điền thông tin:
-   - **Name**: Tên tool
-   - **Description**: Mô tả chi tiết
-   - **Category**: Chọn category phù hợp
-   - **Status**: Active/Inactive/Maintenance
-   - **Price**: Giá tiền (USD)
-   - **Points Cost**: Chi phí points
-   - **Icon**: Upload file icon hoặc chọn emoji
-   - **URL**: Đường dẫn đến tool
-   - **Featured**: Đánh dấu tool nổi bật
+### 5. Kiểm tra dữ liệu Capture
+1. Quay lại Dashboard Admin.
+2. Truy cập **Captured Data** hoặc xem chi tiết Website.
+3. Kiểm tra xem thông tin vừa nhập có xuất hiện trong danh sách không.
 
-### 3. Cấu trúc Database
+## Cấu trúc Database
 
 #### Bảng `tools`
 ```sql

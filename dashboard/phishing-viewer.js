@@ -26,7 +26,44 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1y', // Cache for 1 year
+  etag: true,
+  lastModified: true,
+  index: false, // Don't serve directory listings
+  dotfiles: 'ignore', // Ignore dotfiles for security
+  setHeaders: (res, path) => {
+    // Set CORS headers for all uploads
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for images
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
+    // Set security headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
+    // Set appropriate content type based on file extension
+    const ext = path.toLowerCase().split('.').pop();
+    switch (ext) {
+      case 'webp':
+        res.setHeader('Content-Type', 'image/webp');
+        break;
+      case 'jpg':
+      case 'jpeg':
+        res.setHeader('Content-Type', 'image/jpeg');
+        break;
+      case 'png':
+        res.setHeader('Content-Type', 'image/png');
+        break;
+      case 'gif':
+        res.setHeader('Content-Type', 'image/gif');
+        break;
+      case 'svg':
+        res.setHeader('Content-Type', 'image/svg+xml');
+        break;
+    }
+  }
+}));
 
 // Template rendering function
 const renderPhishingTemplate = (website, templateData) => {

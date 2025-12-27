@@ -1,9 +1,10 @@
 services:
+  # Backend Service
   - type: web
     name: dashboard-backend
     env: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
@@ -11,16 +12,8 @@ services:
       - key: API_PORT
         value: 10000
       - key: CORS_ORIGIN
-        value: https://YOUR_NETLIFY_SITE_NAME.netlify.app
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASS
+        value: https://graceful-platypus.netlify.app
+      - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
@@ -32,3 +25,19 @@ services:
         sync: false
       - key: PUSHER_CLUSTER
         sync: false
+
+  # Phishing Viewer Service
+  - type: web
+    name: phishing-viewer
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node phishing-viewer.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PHISHING_VIEWER_PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+

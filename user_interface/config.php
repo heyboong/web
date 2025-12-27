@@ -1,28 +1,34 @@
 <?php
-// config.php - Database configuration
+// config.php - Database configuration (PostgreSQL)
 
-// Database configuration
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'read1');
-define('DB_USER', 'read1');
-define('DB_PASS', 'WbkBdxkiNrennEeC');
-define('DB_CHARSET', 'utf8mb4');
+// Database configuration from environment variable
+// DATABASE_URL=postgresql://neondb_owner:npg_INAZuqGpK02b@ep-bold-sky-aenvxkww-pooler.c-2.us-east-2.aws.neon.tech/neondb
+
+define('DB_HOST', 'ep-bold-sky-aenvxkww-pooler.c-2.us-east-2.aws.neon.tech');
+define('DB_NAME', 'neondb');
+define('DB_USER', 'neondb_owner');
+define('DB_PASS', 'npg_INAZuqGpK02b');
+define('DB_PORT', '5432');
 
 // PDO connection options
 $pdo_options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES => false,
-    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . DB_CHARSET
 ];
 
-// Create PDO connection
+// Create PDO connection (PostgreSQL)
 try {
-    $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+    // SSL Mode is required for Neon DB
+    $dsn = "pgsql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";sslmode=require";
     $pdo = new PDO($dsn, DB_USER, DB_PASS, $pdo_options);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
+
+// Helper function to handle PostgreSQL boolean and JSON if needed
+// ...
+
 
 // Function to get website by slug
 function getWebsiteBySlug($pdo, $slug) {
