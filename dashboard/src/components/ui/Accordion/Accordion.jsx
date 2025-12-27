@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { forwardRef } from "react";
 
 // Local imports
-import { Box } from "components/ui";
+import { Box } from "../Box";
 import { AccordionProvider } from "./AccordionProvider";
 
 // ----------------------------------------------------------------------

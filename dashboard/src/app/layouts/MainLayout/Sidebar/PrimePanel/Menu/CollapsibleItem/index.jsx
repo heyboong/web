@@ -5,7 +5,9 @@ import { ChevronRightIcon, ChevronLeftIcon } from "@heroicons/react/24/outline";
 import { useTranslation } from "react-i18next";
 
 // Local Imports
-import { AccordionButton, AccordionItem, AccordionPanel } from "components/ui";
+import { AccordionButton } from "components/ui/Accordion/AccordionButton";
+import { AccordionItem } from "components/ui/Accordion/AccordionItem";
+import { AccordionPanel } from "components/ui/Accordion/AccordionPanel";
 import { useLocaleContext } from "app/contexts/locale/context";
 import { MenuItem } from "./MenuItem";
 

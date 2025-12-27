@@ -3,7 +3,7 @@ import { forwardRef } from "react";
 import PropTypes from "prop-types";
 
 // Local Imports
-import { Box } from "components/ui";
+import { Box } from "../Box";
 
 import { AccordionItemContextProvider } from "./AccordionItem.context";
 import { useAccordionContext } from "./Accordion.context";

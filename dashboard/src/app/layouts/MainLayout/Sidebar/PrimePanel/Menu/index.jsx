@@ -11,7 +11,7 @@ import {
   useIsomorphicEffect,
 } from "hooks";
 import { CollapsibleItem } from "./CollapsibleItem";
-import { Accordion } from "components/ui";
+import { Accordion } from "components/ui/Accordion/Accordion";
 import { MenuItem } from "./MenuItem";
 import { Divider } from "./Divider";
 import {

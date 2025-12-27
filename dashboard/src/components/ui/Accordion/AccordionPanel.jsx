@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { forwardRef } from "react";
 
 // Local Imports
-import { Collapse } from "components/ui";
+import { Collapse } from "../Collapse";
 
 import { useAccordionContext } from "./Accordion.context";
 import { useAccordionItemContext } from "./AccordionItem.context";
