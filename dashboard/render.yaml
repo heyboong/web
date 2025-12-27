@@ -26,18 +26,21 @@ services:
       - key: PUSHER_CLUSTER
         sync: false
 
-  # Phishing Viewer Service
+  # Phishing Viewer Service (PHP - User Interface)
   - type: web
-    name: phishing-viewer
-    env: node
+    name: phishing-viewer-php
+    env: docker
     plan: free
-    buildCommand: npm install
-    startCommand: node phishing-viewer.js
+    rootDir: user_interface
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PHISHING_VIEWER_PORT
-        value: 10000
       - key: DATABASE_URL
+        sync: false
+      - key: PUSHER_APP_ID
+        sync: false
+      - key: PUSHER_KEY
+        sync: false
+      - key: PUSHER_SECRET
+        sync: false
+      - key: PUSHER_CLUSTER
         sync: false
 

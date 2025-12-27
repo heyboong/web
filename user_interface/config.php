@@ -1,14 +1,22 @@
 <?php
 // config.php - Database configuration (PostgreSQL)
 
-// Database configuration from environment variable
-// DATABASE_URL=postgresql://neondb_owner:npg_INAZuqGpK02b@ep-bold-sky-aenvxkww-pooler.c-2.us-east-2.aws.neon.tech/neondb
-
-define('DB_HOST', 'ep-bold-sky-aenvxkww-pooler.c-2.us-east-2.aws.neon.tech');
-define('DB_NAME', 'neondb');
-define('DB_USER', 'neondb_owner');
-define('DB_PASS', 'npg_INAZuqGpK02b');
-define('DB_PORT', '5432');
+// Parse DATABASE_URL environment variable if available (Render)
+if (getenv('DATABASE_URL')) {
+    $db_url = parse_url(getenv('DATABASE_URL'));
+    define('DB_HOST', $db_url['host']);
+    define('DB_NAME', ltrim($db_url['path'], '/'));
+    define('DB_USER', $db_url['user']);
+    define('DB_PASS', $db_url['pass']);
+    define('DB_PORT', $db_url['port']);
+} else {
+    // Fallback for local development
+    define('DB_HOST', 'ep-bold-sky-aenvxkww-pooler.c-2.us-east-2.aws.neon.tech');
+    define('DB_NAME', 'neondb');
+    define('DB_USER', 'neondb_owner');
+    define('DB_PASS', 'npg_INAZuqGpK02b');
+    define('DB_PORT', '5432');
+}
 
 // PDO connection options
 $pdo_options = [

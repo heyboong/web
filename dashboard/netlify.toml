@@ -5,7 +5,7 @@
 
 [context.production.environment]
   VITE_API_URL = "https://dashboard-backend.onrender.com"
-  VITE_PHISHING_VIEWER_URL = "https://phishing-viewer.onrender.com"
+  VITE_PHISHING_VIEWER_URL = "https://phishing-viewer-php.onrender.com"
 
 # Proxy API requests to Render Backend (Optional, if you want to use same domain)
 [[redirects]]
