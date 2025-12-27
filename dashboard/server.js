@@ -501,7 +501,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   index: false, // Don't serve directory listings
   dotfiles: 'ignore', // Ignore dotfiles for security
   setHeaders: (res, path) => {
-    // Set CORS headers for all uploads
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  // Chỉ chạy code này nếu thư mục dist tồn tại
+  app.use(express.static(distPath));
+  // ...
+} else {
+  console.log('⚠️ Frontend build (dist) not found. Serving API only.');
+  // ...
+}    // Set CORS headers for all uploads
     res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for images
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
@@ -539,11 +547,7 @@ if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
   
   // Handle SPA routing - send index.html for all other routes
-  app.get('*', (req, res) => {
-    // Skip if it's an API request
-    if (req.path.startsWith('/api')) {
-      return res.status(404).json({ success: false, message: 'API endpoint not found' });
-    }
+  app.get(/^(?!\/api).+/, (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 } else {
