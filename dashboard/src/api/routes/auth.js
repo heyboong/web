@@ -19,8 +19,9 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user by username or email
+    // Use correct column names: password instead of password_hash
     const result = await executeQuery(
-      'SELECT id, username, email, password_hash, is_active, is_admin FROM users WHERE username = ? OR email = ?',
+      'SELECT id, username, email, password, is_active, is_admin FROM users WHERE username = ? OR email = ?',
       [username, username]
     );
 
@@ -42,7 +43,8 @@ router.post('/login', async (req, res) => {
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    // Use correct column: password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
