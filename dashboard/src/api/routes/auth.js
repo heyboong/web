@@ -36,7 +36,7 @@ router.post('/login', async (req, res) => {
 
     // Check if user is active
     if (!user.is_active) {
-      return res.status(401).json({
+      return res.status(403).json({
         success: false,
         message: 'Account is inactive'
       });
@@ -60,14 +60,9 @@ router.post('/login', async (req, res) => {
       role: user.is_admin ? 'admin' : 'user'
     };
 
-    console.log('Login - JWT Secret being used:', apiConfig.jwtSecret);
-    console.log('Login - User payload:', payload);
-    
     const authToken = jwt.sign(payload, apiConfig.jwtSecret, {
       expiresIn: '7d'
     });
-    
-    console.log('Login - Generated token:', authToken);
 
     // Update last login
     await executeQuery(
