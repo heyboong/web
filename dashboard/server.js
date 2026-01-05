@@ -7309,7 +7309,7 @@ app.get('/api/debug/websites-table', async (req, res) => {
 // const server = app.listen...
 
 // Register routes
-app.use('/api', authRouter); // Auth routes (login, register) are usually at root /api/login, etc.
+app.use('/api/auth', authRouter); // Auth routes will be at /api/auth/login, /api/auth/register, etc.
 app.use('/api/admin', adminRouter);
 app.use('/api/pricing', pricingRouter);
 app.use('/api/capture', captureRouter);
