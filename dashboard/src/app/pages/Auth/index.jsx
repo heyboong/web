@@ -1,9 +1,9 @@
 // Import Dependencies
 import { Link } from "react-router";
-import { EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // Local Imports
 import Logo from "assets/appLogo.svg?react";
@@ -17,6 +17,7 @@ import { Page } from "components/shared/Page";
 
 export default function SignIn() {
   const { login, errorMessage, isLoading } = useAuthContext();
+  const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
@@ -91,12 +92,25 @@ export default function SignIn() {
                 <Input
                   label="Password"
                   placeholder="Enter Password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   prefix={
                     <LockClosedIcon
                       className="size-5 transition-colors duration-200"
                       strokeWidth="1"
                     />
+                  }
+                  suffix={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="flex size-full items-center justify-center text-gray-400 transition-colors hover:text-gray-600 focus:outline-none dark:text-dark-300 dark:hover:text-dark-100"
+                    >
+                      {showPassword ? (
+                        <EyeSlashIcon className="size-5" strokeWidth="1.5" />
+                      ) : (
+                        <EyeIcon className="size-5" strokeWidth="1.5" />
+                      )}
+                    </button>
                   }
                   {...register("password")}
                   error={errors?.password?.message}
