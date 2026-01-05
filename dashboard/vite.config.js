@@ -60,9 +60,14 @@ export default defineConfig({
     watch: {
       include: 'src/**'
     },
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: undefined
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          ui: ['@heroicons/react'],
+          vendor: ['axios', 'lodash-es']
+        }
       }
     }
   },
